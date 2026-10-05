@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Vô hiệu hóa nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Vô hiệu hóa nhóm "{{ group.name }}"?</h1>
+    <p>Nhóm sẽ biến mất khỏi danh sách công khai nhưng dữ liệu (bài đăng, thành viên) vẫn được giữ nguyên,
+        có thể kích hoạt lại bất kỳ lúc nào.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-danger" type="submit">Vô hiệu hóa</button>
+        <a class="btn btn-secondary" href="{{ group.get_absolute_url }}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

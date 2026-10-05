@@ -87,6 +87,55 @@ celery -A config worker -l info -P solo
 celery -A config beat -l info
 ```
 
+## Gửi email (kết nối Mailtrap)
+
+Các luồng của `django-allauth` cần gửi email thật: **xác thực email khi đăng ký**, **khôi phục mật khẩu**.
+Máy dev dùng [Mailtrap](https://mailtrap.io) (Email Testing sandbox, có gói miễn phí) — email được "gửi" vào
+1 hộp thư ảo riêng để xem nội dung/bấm link, **không bao giờ bay vào hộp thư thật** dù địa chỉ nhận là email
+sinh viên/giảng viên thật.
+
+### Cách lấy thông tin kết nối
+
+1. Đăng ký tài khoản miễn phí tại [mailtrap.io](https://mailtrap.io).
+2. Vào **Email Testing** → chọn (hoặc tạo) 1 **Inbox**.
+3. Mở tab **SMTP Settings** trong inbox đó → chọn mục **Django** (hoặc bất kỳ, chỉ cần lấy đúng
+   Username/Password) → copy 2 giá trị **Username** và **Password**.
+
+### Cách khai vào `.env`
+
+```ini
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=sandbox.smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_HOST_USER=<Username lấy từ Mailtrap>
+EMAIL_HOST_PASSWORD=<Password lấy từ Mailtrap>
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=EC Forum <no-reply@due.udn.vn>
+```
+
+Khởi động lại `runserver` sau khi sửa `.env` (biến môi trường chỉ đọc lúc Django khởi động).
+
+### Cách kiểm tra đã kết nối đúng
+
+1. Vào trang đăng ký (`/accounts/signup/`), tạo tài khoản mới bằng email `@due.udn.vn` bất kỳ.
+2. Mở lại Mailtrap → inbox vừa cấu hình → sẽ thấy 1 email mới với tiêu đề xác thực tài khoản
+   (nội dung lấy từ [`templates/account/email/email_confirmation_message.txt`](templates/account/email/email_confirmation_message.txt)).
+3. Bấm link xác thực ngay trong email đó (Mailtrap cho xem/bấm link như hộp thư thật) → tài khoản được kích hoạt.
+
+Nếu không thấy email nào xuất hiện: kiểm tra lại `EMAIL_HOST_USER`/`EMAIL_HOST_PASSWORD` trong `.env` có đúng
+với Mailtrap không, và chắc chắn đã khởi động lại `runserver`.
+
+### Không muốn cài Mailtrap, chỉ cần xem email ngay trên terminal
+
+Đổi `EMAIL_BACKEND` trong `.env` thành:
+
+```ini
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+```
+
+Email sẽ in thẳng ra terminal đang chạy `runserver` (kể cả link xác thực) thay vì gửi qua Mailtrap —
+tiện lúc demo offline không có mạng, nhưng không có giao diện hộp thư để xem như Mailtrap.
+
 ## Giao diện 100% tiếng Việt (kể cả luồng của allauth)
 
 `django-allauth` và `django-simple-captcha` không có sẵn bản dịch tiếng Việt, nên toàn bộ trang
@@ -124,10 +173,10 @@ kể cả khi có người cố gửi thẳng HTML độc hại qua request (b�
 tạo nhóm, lịch sử chỉnh sửa, nhật ký kiểm duyệt + kháng nghị), views (CBV cho CRUD chuẩn, FBV cho luồng
 nghiệp vụ đặc biệt), rate limiting cho đăng bài/bình luận, hash mật khẩu Argon2, giới hạn domain email
 khi đăng ký (tách riêng Họ/Tên/Lớp), avatar + ảnh bìa ở trang hồ sơ, template tối giản đủ chạy, dữ liệu
-demo qua migration, tìm kiếm & lọc toàn hệ thống (app `search`, xem mục bên dưới).
+demo qua migration, tìm kiếm & lọc toàn hệ thống (app `search`, xem mục bên dưới), wireframe 8 màn hình
+chính tại [`docs/wireframes/`](docs/wireframes/).
 
-Chưa làm: giao diện theo wireframe (đang chờ mockup của nhóm), backup định kỳ qua Celery beat (task
-chưa viết).
+Chưa làm: backup định kỳ qua Celery beat (task chưa viết).
 
 ## Tìm kiếm & lọc thông tin (app `search`)
 

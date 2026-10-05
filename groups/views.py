@@ -7,9 +7,10 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.models import User
 from config.mixins import ContentStatus
+from interactions.utils import annotate_interaction_counts
 
 from . import services
-from .forms import GroupCreateForm, GroupPostForm, GroupRejectForm
+from .forms import AddMemberForm, GroupCreateForm, GroupDisableForm, GroupEditForm, GroupPostForm, GroupRejectForm, MemberRoleForm
 from .models import Group, GroupMembership, GroupPost
 
 
@@ -32,8 +33,25 @@ class GroupDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["posts"] = self.object.posts.filter(status=ContentStatus.PUBLISHED)
-        ctx["is_member"] = self.request.user.is_authenticated and self.object.memberships.filter(user=self.request.user).exists()
+        posts = annotate_interaction_counts(
+            self.object.posts.filter(status=ContentStatus.PUBLISHED), GroupPost
+        )
+        current_sort = self.request.GET.get("sort", "new")
+        posts = posts.order_by("-last_activity_at" if current_sort == "activity" else "-created_at")
+        ctx["posts"] = posts
+        ctx["current_sort"] = current_sort
+        user = self.request.user
+        my_membership = self.object.memberships.filter(user=user).first() if user.is_authenticated else None
+        ctx["is_member"] = my_membership is not None
+        ctx["my_role"] = my_membership.role if my_membership else None
+        ctx["is_manager"] = my_membership is not None and my_membership.role in (
+            GroupMembership.Role.LEADER, GroupMembership.Role.MODERATOR,
+        )
+        ctx["memberships"] = self.object.memberships.select_related("user").order_by(
+            "role", "user__last_name", "user__first_name",
+        )
+        ctx["is_staff_user"] = user.is_authenticated and user.role == User.Role.STAFF
+        ctx["add_member_form"] = AddMemberForm()
         return ctx
 
 
@@ -179,6 +197,127 @@ def group_post_delete(request, slug, pk):
     return render(request, "groups/group_post_confirm_delete.html", {"post": post, "group": group})
 
 
+def _is_group_manager(user, group):
+    return user.is_authenticated and group.memberships.filter(
+        user=user, role__in=[GroupMembership.Role.LEADER, GroupMembership.Role.MODERATOR],
+    ).exists()
+
+
+@login_required
+def group_edit(request, slug):
+    group = get_object_or_404(Group, slug=slug)
+    is_leader = group.memberships.filter(user=request.user, role=GroupMembership.Role.LEADER).exists()
+    if not (is_leader or request.user.role == User.Role.STAFF):
+        messages.error(request, "Bạn không có quyền sửa thông tin nhóm này.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        form = GroupEditForm(request.POST, request.FILES, instance=group)
+        if form.is_valid():
+            services.update_group_info(
+                group, form.cleaned_data["name"], form.cleaned_data["description"],
+                logo=form.cleaned_data.get("logo"), cover_image=form.cleaned_data.get("cover_image"),
+            )
+            messages.success(request, "Đã cập nhật thông tin nhóm.")
+            return redirect(group.get_absolute_url())
+    else:
+        form = GroupEditForm(instance=group)
+    return render(request, "groups/group_edit_form.html", {"form": form, "group": group})
+
+
+@user_passes_test(_is_staff, login_url="home")
+def group_disable(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if request.method == "POST":
+        form = GroupDisableForm(request.POST)
+        if form.is_valid():
+            try:
+                services.disable_group(group, request.user, form.cleaned_data["reason"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, f"Đã vô hiệu hóa nhóm '{group.name}'.")
+            return redirect(group.get_absolute_url())
+    else:
+        form = GroupDisableForm()
+    return render(request, "groups/group_disable_form.html", {"form": form, "group": group})
+
+
+@user_passes_test(_is_staff, login_url="home")
+def group_enable(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.DISABLED)
+    services.enable_group(group, request.user)
+    messages.success(request, f"Đã kích hoạt lại nhóm '{group.name}'.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_member_add(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền thêm thành viên.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        form = AddMemberForm(request.POST)
+        if form.is_valid():
+            try:
+                services.add_member(group, form.cleaned_data["email"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, "Đã thêm thành viên vào nhóm.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_member_remove(request, slug, user_id):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền xóa thành viên.")
+        return redirect(group.get_absolute_url())
+    target = get_object_or_404(User, pk=user_id)
+    if request.method == "POST":
+        try:
+            services.remove_member(group, target)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f"Đã xóa {target} khỏi nhóm.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_member_role(request, slug, user_id):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền đổi vai trò thành viên.")
+        return redirect(group.get_absolute_url())
+    target = get_object_or_404(User, pk=user_id)
+    if request.method == "POST":
+        form = MemberRoleForm(request.POST)
+        if form.is_valid():
+            try:
+                services.change_member_role(group, target, form.cleaned_data["role"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, f"Đã đổi vai trò của {target}.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_leave(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if request.method == "POST":
+        try:
+            services.leave_group(group, request.user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Bạn đã rời nhóm.")
+            return redirect("groups:list")
+    return redirect(group.get_absolute_url())
+
+
 class GroupPostDetailView(DetailView):
     model = GroupPost
     template_name = "groups/group_post_detail.html"
@@ -187,6 +326,13 @@ class GroupPostDetailView(DetailView):
 
     def get_queryset(self):
         return GroupPost.objects.filter(group__slug=self.kwargs["slug"])
+
+    def get_object(self, queryset=None):
+        from interactions.utils import increment_view_count
+
+        obj = super().get_object(queryset)
+        increment_view_count(obj)
+        return obj
 
     def get_context_data(self, **kwargs):
         from django.contrib.contenttypes.models import ContentType

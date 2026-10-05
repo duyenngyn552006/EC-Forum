@@ -1,4 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count, F, IntegerField, Max, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.http import Http404
 
 # Chi cho phep tuong tac (comment/like/save) tren 3 loai noi dung nay -
@@ -36,6 +38,50 @@ def get_top_level_comments(content_type, object_id):
         .prefetch_related(Prefetch("replies", queryset=replies_qs))
         .order_by("created_at")
     )
+
+
+def annotate_interaction_counts(queryset, model):
+    """Gan them comment_count/like_count/last_activity_at vao 1 queryset (ForumPost/
+    Announcement/GroupPost) bang Subquery theo content_type+object_id - khong can
+    GenericRelation tren model (tranh phai them migration), dung cho trang danh sach
+    de hien so binh luan/luot thich va sap xep theo "hoat dong gan nhat" (CLAUDE.md:
+    giao dien hien thi du lieu tuong tac) ma khong bi N+1 query."""
+    from .models import Comment, Like
+
+    content_type = ContentType.objects.get_for_model(model)
+
+    comment_counts = (
+        Comment.objects.filter(content_type=content_type, object_id=OuterRef("pk"), status="published")
+        .values("object_id")
+        .annotate(count=Count("id"))
+        .values("count")
+    )
+    like_counts = (
+        Like.objects.filter(content_type=content_type, object_id=OuterRef("pk"))
+        .values("object_id")
+        .annotate(count=Count("id"))
+        .values("count")
+    )
+    last_comment_at = (
+        Comment.objects.filter(content_type=content_type, object_id=OuterRef("pk"), status="published")
+        .values("object_id")
+        .annotate(latest=Max("created_at"))
+        .values("latest")
+    )
+
+    return queryset.annotate(
+        comment_count=Coalesce(Subquery(comment_counts, output_field=IntegerField()), 0),
+        like_count=Coalesce(Subquery(like_counts, output_field=IntegerField()), 0),
+        last_activity_at=Coalesce(Subquery(last_comment_at), "created_at"),
+    )
+
+
+def increment_view_count(obj):
+    """Tang luot xem khi mo trang chi tiet (ForumPost/Announcement/GroupPost) - dung
+    update() truc tiep tren DB de tranh ghi de cac field khac va tranh race condition,
+    sau do cap nhat lai gia tri tren object dang giu de hien thi dung ngay lan xem nay."""
+    type(obj).objects.filter(pk=obj.pk).update(view_count=F("view_count") + 1)
+    obj.view_count += 1
 
 
 def get_interaction_context(user, obj):

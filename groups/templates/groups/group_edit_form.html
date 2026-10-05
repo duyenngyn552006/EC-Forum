@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Sửa thông tin nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Sửa thông tin nhóm "{{ group.name }}"</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Lưu</button>
+        <a class="btn btn-secondary" href="{{ group.get_absolute_url }}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

@@ -18,4 +18,5 @@ urlpatterns = [
     path("keywords/new/", views.SensitiveKeywordCreateView.as_view(), name="keyword_create"),
     path("keywords/<int:pk>/edit/", views.SensitiveKeywordUpdateView.as_view(), name="keyword_edit"),
     path("keywords/<int:pk>/delete/", views.SensitiveKeywordDeleteView.as_view(), name="keyword_delete"),
+    path("logs/", views.ModerationLogListView.as_view(), name="log_list"),
 ]

@@ -68,6 +68,8 @@ class ModerationLog(models.Model):
         ROLE_CHANGE = "role_change", "Thay đổi vai trò"
         APPROVE_GROUP = "approve_group", "Duyệt yêu cầu tạo nhóm"
         REJECT_GROUP = "reject_group", "Từ chối yêu cầu tạo nhóm"
+        DISABLE_GROUP = "disable_group", "Vô hiệu hóa nhóm"
+        ENABLE_GROUP = "enable_group", "Kích hoạt lại nhóm"
         APPEAL_ACCEPTED = "appeal_accepted", "Chấp nhận kháng nghị"
         APPEAL_REJECTED = "appeal_rejected", "Từ chối kháng nghị"
 

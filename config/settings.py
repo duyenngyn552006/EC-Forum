@@ -145,11 +145,16 @@ ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 ACCOUNT_RATE_LIMITS = {
     "login_failed": "5/5m/ip,5/5m/key",
 }
+# Gui email thong bao (khong phai email hanh dong) khi doi/dat lai mat khau thanh cong,
+# doi email... - mac dinh allauth la False nen cac template co san (password_changed_*,
+# password_reset_*) khong bao gio duoc gui neu khong bat co nay
+ACCOUNT_EMAIL_NOTIFICATIONS = True
 # Form dang ky rieng: chi cho phep email dung domain truong/khoa (xem accounts/forms.py)
 # Form dang nhap rieng: bat buoc giai CAPTCHA sau vai lan dang nhap sai lien tiep
 ACCOUNT_FORMS = {
     "signup": "accounts.forms.DomainRestrictedSignupForm",
     "login": "accounts.forms.CaptchaLoginForm",
+    "change_password": "accounts.forms.ChangePasswordForm",
 }
 
 # Domain email duoc phep dang ky - da chot: @due.udn.vn (Truong Dai hoc Kinh te - DHDN)

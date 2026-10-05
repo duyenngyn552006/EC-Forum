@@ -47,6 +47,29 @@ class SensitiveKeywordListView(_StaffRequiredMixin, ListView):
     context_object_name = "keywords"
 
 
+class ModerationLogListView(_StaffRequiredMixin, ListView):
+    """Xem toan bo nhat ky xu ly vi pham - truoc day chi xem duoc theo tung user rieng
+    le luc duyet khang nghi, gio co them trang duyet tu do cho ca he thong."""
+
+    model = ModerationLog
+    template_name = "moderation/moderation_log_list.html"
+    context_object_name = "logs"
+    paginate_by = 30
+
+    def get_queryset(self):
+        qs = ModerationLog.objects.select_related("actor", "target_user", "content_type").order_by("-created_at")
+        action = self.request.GET.get("action")
+        if action:
+            qs = qs.filter(action=action)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["action_choices"] = ModerationLog.Action.choices
+        ctx["current_action"] = self.request.GET.get("action", "")
+        return ctx
+
+
 class SensitiveKeywordCreateView(_StaffRequiredMixin, CreateView):
     model = SensitiveKeyword
     form_class = SensitiveKeywordForm

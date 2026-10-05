@@ -1,3 +1,4 @@
+from allauth.account.forms import ChangePasswordForm as AllauthChangePasswordForm
 from allauth.account.forms import LoginForm as AllauthLoginForm
 from allauth.account.forms import SignupForm
 from captcha.fields import CaptchaField
@@ -90,3 +91,15 @@ class DomainRestrictedSignupForm(SignupForm):
 
         user.save()
         return user
+
+
+class ChangePasswordForm(AllauthChangePasswordForm):
+    """Doi mat khau khi DA dang nhap - bo link "Quen mat khau?" o field mat khau hien
+    tai (allauth mac dinh gan help_text do cho moi PasswordField co show_reset_help).
+    Link nay chi hop ly o trang dang nhap (chua vao duoc he thong); da dang nhap roi ma
+    khong nho mat khau hien tai thi phai dang xuat va dung luong "Quen mat khau?" rieng,
+    khong nen goi y ngay trong form nay gay roi."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["oldpassword"].help_text = ""

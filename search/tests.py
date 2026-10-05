@@ -46,7 +46,8 @@ class SearchViewTests(TestCase):
             class_name="23K5",
         )
         self.staff = User.objects.create_user(email="staff_search@due.udn.vn", password="Pass1234!", role=User.Role.STAFF)
-        self.category = Category.objects.create(name="Hoc tap")
+        # Ten rieng cho test, tranh trung slug voi cac chuyen muc seed that (vd "Hoc tap")
+        self.category = Category.objects.create(name="SearchTestCat")
 
         self.published_post = ForumPost.objects.create(
             author=self.student, category=self.category, title="Hoi ve do an tot nghiep",

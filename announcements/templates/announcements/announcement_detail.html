@@ -5,7 +5,7 @@
     {% if announcement.is_pinned %}<span class="pill">📌 Đã ghim</span>{% endif %}
     <span class="pill">{{ announcement.get_kind_display }}</span>
     <h1>{{ announcement.title }}</h1>
-    <p>{{ announcement.author }} · {{ announcement.created_at|date:"d/m/Y H:i" }}
+    <p>{{ announcement.author }} · {{ announcement.created_at|date:"d/m/Y H:i" }} · 👁️ {{ announcement.view_count }} lượt xem
         {% if announcement.is_edited %} · <em>Đã chỉnh sửa lúc {{ announcement.updated_at|date:"d/m/Y H:i" }}</em>{% endif %}</p>
     {% if announcement.kind == "event" and announcement.event_datetime %}
         <p>🗓️ <strong>Thời gian diễn ra:</strong> {{ announcement.event_datetime|date:"d/m/Y H:i" }}</p>

@@ -135,3 +135,137 @@ class MentionTests(TestCase):
         response = self.client.get(post.get_absolute_url())
         self.assertContains(response, "mentionFeedData")
         self.assertContains(response, f"@user-{self.tagged.pk}")
+
+
+class GroupPostViewCountTests(TestCase):
+    def setUp(self):
+        self.leader = User.objects.create_user(email="vcleader1@due.udn.vn", password="Pass1234!", role=User.Role.LECTURER)
+        self.group = services.request_create_group(self.leader, "Nhom Test Luot Xem", "mo ta")
+        self.post, _ = services.create_group_post(self.group, self.leader, "Bai test luot xem", "noi dung")
+
+    def test_detail_view_increments_view_count(self):
+        self.assertEqual(self.post.view_count, 0)
+        self.client.force_login(self.leader)
+        self.client.get(reverse("groups:post_detail", args=[self.group.slug, self.post.pk]))
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.view_count, 1)
+
+
+class GroupEditDisableEnableTests(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(email="gstaff1@due.udn.vn", password="Pass1234!", role=User.Role.STAFF)
+        self.leader = User.objects.create_user(email="gleader1@due.udn.vn", password="Pass1234!", role=User.Role.LECTURER)
+        self.outsider = User.objects.create_user(email="goutsider1@due.udn.vn", password="Pass1234!")
+        self.group = services.request_create_group(self.leader, "Nhom Test Edit", "mo ta goc")
+
+    def test_leader_can_edit_group_info(self):
+        self.client.force_login(self.leader)
+        self.client.post(
+            reverse("groups:edit", args=[self.group.slug]),
+            {"name": "Nhom Da Doi Ten", "description": "mo ta moi"},
+        )
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.name, "Nhom Da Doi Ten")
+        self.assertEqual(self.group.description, "mo ta moi")
+
+    def test_non_leader_cannot_edit_group_info(self):
+        self.client.force_login(self.outsider)
+        response = self.client.post(
+            reverse("groups:edit", args=[self.group.slug]),
+            {"name": "Hack ten nhom", "description": ""},
+        )
+        self.group.refresh_from_db()
+        self.assertNotEqual(self.group.name, "Hack ten nhom")
+
+    def test_staff_can_disable_and_reenable_group(self):
+        self.client.force_login(self.staff)
+        self.client.post(reverse("groups:disable", args=[self.group.slug]), {"reason": "Vi pham noi quy"})
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.status, Group.Status.DISABLED)
+
+        response = self.client.get(reverse("groups:list"))
+        self.assertNotIn(self.group, response.context["groups"])
+
+        self.client.get(reverse("groups:enable", args=[self.group.slug]))
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.status, Group.Status.ACTIVE)
+
+    def test_leader_cannot_disable_group_only_staff_can(self):
+        self.client.force_login(self.leader)
+        response = self.client.post(reverse("groups:disable", args=[self.group.slug]), {"reason": "test"})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse("home")))
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.status, Group.Status.ACTIVE)
+
+
+class GroupMembershipManagementTests(TestCase):
+    def setUp(self):
+        self.leader = User.objects.create_user(email="mleader1@due.udn.vn", password="Pass1234!", role=User.Role.LECTURER)
+        self.moderator_user = User.objects.create_user(email="mmod1@due.udn.vn", password="Pass1234!")
+        self.member_user = User.objects.create_user(email="mmember1@due.udn.vn", password="Pass1234!")
+        self.outsider = User.objects.create_user(email="moutsider1@due.udn.vn", password="Pass1234!")
+        self.group = services.request_create_group(self.leader, "Nhom Test Member", "mo ta")
+        GroupMembership.objects.create(group=self.group, user=self.moderator_user, role=GroupMembership.Role.MODERATOR)
+        GroupMembership.objects.create(group=self.group, user=self.member_user, role=GroupMembership.Role.MEMBER)
+
+    def test_leader_can_add_member_by_email(self):
+        new_user = User.objects.create_user(email="mnew1@due.udn.vn", password="Pass1234!")
+        self.client.force_login(self.leader)
+        self.client.post(reverse("groups:member_add", args=[self.group.slug]), {"email": new_user.email})
+        self.assertTrue(GroupMembership.objects.filter(group=self.group, user=new_user).exists())
+
+    def test_cannot_add_nonexistent_email(self):
+        self.client.force_login(self.leader)
+        response = self.client.post(
+            reverse("groups:member_add", args=[self.group.slug]), {"email": "khongtontai@due.udn.vn"}, follow=True,
+        )
+        messages = list(response.context["messages"])
+        self.assertTrue(any("Không tìm thấy" in str(m) for m in messages))
+
+    def test_outsider_cannot_add_member(self):
+        new_user = User.objects.create_user(email="mnew2@due.udn.vn", password="Pass1234!")
+        self.client.force_login(self.outsider)
+        self.client.post(reverse("groups:member_add", args=[self.group.slug]), {"email": new_user.email})
+        self.assertFalse(GroupMembership.objects.filter(group=self.group, user=new_user).exists())
+
+    def test_moderator_can_remove_regular_member(self):
+        self.client.force_login(self.moderator_user)
+        self.client.post(reverse("groups:member_remove", args=[self.group.slug, self.member_user.pk]))
+        self.assertFalse(GroupMembership.objects.filter(group=self.group, user=self.member_user).exists())
+
+    def test_cannot_remove_leader(self):
+        self.client.force_login(self.moderator_user)
+        self.client.post(reverse("groups:member_remove", args=[self.group.slug, self.leader.pk]))
+        self.assertTrue(GroupMembership.objects.filter(group=self.group, user=self.leader).exists())
+
+    def test_regular_member_cannot_remove_others(self):
+        self.client.force_login(self.member_user)
+        self.client.post(reverse("groups:member_remove", args=[self.group.slug, self.moderator_user.pk]))
+        self.assertTrue(GroupMembership.objects.filter(group=self.group, user=self.moderator_user).exists())
+
+    def test_leader_can_promote_member_to_moderator(self):
+        self.client.force_login(self.leader)
+        self.client.post(
+            reverse("groups:member_role", args=[self.group.slug, self.member_user.pk]), {"role": "moderator"},
+        )
+        membership = GroupMembership.objects.get(group=self.group, user=self.member_user)
+        self.assertEqual(membership.role, GroupMembership.Role.MODERATOR)
+
+    def test_cannot_change_leader_role(self):
+        self.client.force_login(self.moderator_user)
+        self.client.post(
+            reverse("groups:member_role", args=[self.group.slug, self.leader.pk]), {"role": "member"},
+        )
+        membership = GroupMembership.objects.get(group=self.group, user=self.leader)
+        self.assertEqual(membership.role, GroupMembership.Role.LEADER)
+
+    def test_member_can_leave_group(self):
+        self.client.force_login(self.member_user)
+        self.client.post(reverse("groups:leave", args=[self.group.slug]))
+        self.assertFalse(GroupMembership.objects.filter(group=self.group, user=self.member_user).exists())
+
+    def test_leader_cannot_leave_group(self):
+        self.client.force_login(self.leader)
+        self.client.post(reverse("groups:leave", args=[self.group.slug]))
+        self.assertTrue(GroupMembership.objects.filter(group=self.group, user=self.leader).exists())

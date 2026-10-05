@@ -6,6 +6,7 @@ from django_ratelimit.decorators import ratelimit
 
 from accounts.models import User
 from config.mixins import ContentStatus, PinLimitExceeded
+from interactions.utils import annotate_interaction_counts
 
 from . import services
 from .forms import AnnouncementAttachmentFormSet, AnnouncementForm
@@ -27,13 +28,31 @@ class AnnouncementListView(ListView):
         kind = self.request.GET.get("kind")
         if kind:
             qs = qs.filter(kind=kind)
+
+        qs = annotate_interaction_counts(qs, Announcement)
+        if self.request.GET.get("sort") == "activity":
+            qs = qs.order_by("-is_pinned", "-last_activity_at")
+        else:
+            qs = qs.order_by("-is_pinned", "-created_at")
         return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["current_sort"] = self.request.GET.get("sort", "new")
+        return ctx
 
 
 class AnnouncementDetailView(DetailView):
     model = Announcement
     template_name = "announcements/announcement_detail.html"
     context_object_name = "announcement"
+
+    def get_object(self, queryset=None):
+        from interactions.utils import increment_view_count
+
+        obj = super().get_object(queryset)
+        increment_view_count(obj)
+        return obj
 
     def get_context_data(self, **kwargs):
         from django.contrib.contenttypes.models import ContentType

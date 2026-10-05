@@ -2,10 +2,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Vo hieu hoa tinh nang "Doi Email" cua allauth - email dang nhap gan voi MSSV va
+    # bi gioi han domain @due.udn.vn luc dang ky (xem accounts/forms.py), nhung form
+    # doi email mac dinh cua allauth KHONG di qua validate domain do, se cho phep them
+    # email domain bat ky neu khong chan. Dat TRUOC include("allauth.urls") de ghi de.
+    path("accounts/email/", RedirectView.as_view(pattern_name="home"), name="account_email"),
     path("accounts/", include("allauth.urls")),
     path("captcha/", include("captcha.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),

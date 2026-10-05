@@ -19,6 +19,7 @@ class ModeratedContentMixin(models.Model):
 
     status = models.CharField(max_length=20, choices=ContentStatus.choices, default=ContentStatus.PUBLISHED)
     edit_count = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,6 +42,21 @@ class PinnableMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+class StaffRequiredMixin:
+    """Chi Giao vu Khoa (role=staff) duoc vao trang - dung chung cho moi CBV quan tri
+    thay vi moi app tu dinh nghia rieng (truoc day lap lai y het o accounts/forum/
+    moderation). Redirect ve home + bao loi thay vi 403 tran trui."""
+
+    def dispatch(self, request, *args, **kwargs):
+        from django.contrib import messages
+        from django.shortcuts import redirect
+
+        if not (request.user.is_authenticated and request.user.role == "staff"):
+            messages.error(request, "Chỉ Giáo vụ Khoa mới có quyền truy cập trang này.")
+            return redirect("home")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class PinLimitExceeded(Exception):

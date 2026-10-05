@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Xóa chuyên mục{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Xác nhận xóa chuyên mục "{{ object.name }}"?</h1>
+    <p>Nếu chuyên mục đang có bài viết, hệ thống sẽ từ chối xóa và báo lỗi để bạn chuyển bài viết trước.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Xóa</button>
+        <a class="btn btn-secondary" href="{% url 'forum:category_list' %}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

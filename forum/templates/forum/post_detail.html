@@ -4,7 +4,7 @@
 <div class="card">
     {% if post.is_pinned %}<span class="pill">📌 Đã ghim</span>{% endif %}
     <h1>{{ post.title }}</h1>
-    <p>{{ post.category.name }} · {{ post.author }} · {{ post.created_at|date:"d/m/Y H:i" }}
+    <p>{{ post.category.name }} · {{ post.author }} · {{ post.created_at|date:"d/m/Y H:i" }} · 👁️ {{ post.view_count }} lượt xem
         {% if post.is_edited %} · <em>Đã chỉnh sửa lúc {{ post.updated_at|date:"d/m/Y H:i" }}</em>{% endif %}</p>
     {% if post.featured_image %}<img src="{{ post.featured_image.url }}" alt="" style="max-width:100%; border-radius:10px; margin-bottom:12px;">{% endif %}
     <div class="rich-content">{{ post.body|safe }}</div>

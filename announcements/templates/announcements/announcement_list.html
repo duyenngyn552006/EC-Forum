@@ -6,6 +6,10 @@
     {% if user.is_authenticated and user.role in "bch,staff" %}
         <a class="btn" href="{% url 'announcements:create' %}">+ Đăng thông báo mới</a>
     {% endif %}
+    <div class="filter-pills" style="margin-top:12px;">
+        <a href="?sort=new" {% if current_sort == "new" %}class="active"{% endif %}>Mới nhất</a>
+        <a href="?sort=activity" {% if current_sort == "activity" %}class="active"{% endif %}>Hoạt động gần nhất</a>
+    </div>
 </div>
 {% for a in announcements %}
 <div class="list-card{% if a.is_pinned %} pinned{% endif %}">
@@ -21,6 +25,9 @@
             <span>{{ a.author }}</span>
             <span>· {{ a.created_at|date:"d/m/Y H:i" }}</span>
             {% if a.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+            <span>· 👁️ {{ a.view_count }}</span>
+            <span>· 💬 {{ a.comment_count }}</span>
+            <span>· 👍 {{ a.like_count }}</span>
         </div>
         <h3 class="list-title"><a href="{% url 'announcements:detail' a.pk %}">{{ a.title }}</a></h3>
         <p class="list-excerpt">{{ a.body|striptags|truncatewords:28 }}</p>

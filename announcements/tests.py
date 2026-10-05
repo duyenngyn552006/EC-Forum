@@ -7,6 +7,20 @@ from . import services
 from .models import Announcement
 
 
+class AnnouncementViewCountTests(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(email="vc_staff@due.udn.vn", password="Pass1234!", role=User.Role.STAFF)
+        self.announcement, _ = services.create_announcement(
+            self.staff, Announcement.Kind.OFFICIAL, "Thong bao test luot xem", "noi dung",
+        )
+
+    def test_detail_view_increments_view_count(self):
+        self.assertEqual(self.announcement.view_count, 0)
+        self.client.get(reverse("announcements:detail", args=[self.announcement.pk]))
+        self.announcement.refresh_from_db()
+        self.assertEqual(self.announcement.view_count, 1)
+
+
 class EventDatetimeTests(TestCase):
     def setUp(self):
         self.bch = User.objects.create_user(email="bchtest2@due.udn.vn", password="Pass1234!", role=User.Role.BCH)

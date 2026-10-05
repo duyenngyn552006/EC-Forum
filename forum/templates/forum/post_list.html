@@ -17,6 +17,29 @@
             <a href="{% url 'forum:post_list_by_category' c.slug %}" {% if request.resolver_match.kwargs.category_slug == c.slug %}class="active"{% endif %}>{{ c.name }}</a>
         {% endfor %}
     </div>
+    <form method="get" class="filter-grid" style="margin-top:12px;">
+        {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+        <div>
+            <label>Thẻ</label>
+            <select name="tag">
+                <option value="">Tất cả</option>
+                {% for t in tags %}
+                    <option value="{{ t.slug }}" {% if t.slug == current_tag %}selected{% endif %}>#{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Sắp xếp</label>
+            <select name="sort">
+                <option value="new" {% if current_sort == "new" %}selected{% endif %}>Mới nhất</option>
+                <option value="activity" {% if current_sort == "activity" %}selected{% endif %}>Hoạt động gần nhất</option>
+            </select>
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button class="btn" type="submit">Lọc</button>
+        </div>
+    </form>
 </div>
 
 {% for post in posts %}
@@ -33,6 +56,9 @@
             <span>{{ post.author }}</span>
             <span>· {{ post.created_at|date:"d/m/Y H:i" }}</span>
             {% if post.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+            <span>· 👁️ {{ post.view_count }}</span>
+            <span>· 💬 {{ post.comment_count }}</span>
+            <span>· 👍 {{ post.like_count }}</span>
         </div>
         <h3 class="list-title"><a href="{% url 'forum:post_detail' post.pk %}">{{ post.title }}</a></h3>
         <p class="list-excerpt">{{ post.body|striptags|truncatewords:28 }}</p>

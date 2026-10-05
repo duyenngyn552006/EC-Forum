@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Quản lý thẻ{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Thẻ (Tag)</h1>
+    <p>Thẻ dùng để phân loại bài viết diễn đàn. Người đăng bài chỉ chọn được trong danh sách này,
+        không tự tạo thẻ mới được — muốn thêm thẻ phải vào đây.</p>
+    <a class="btn" href="{% url 'forum:tag_create' %}">+ Thêm thẻ</a>
+
+    <div class="table-responsive" style="margin-top:14px;">
+        <table>
+            <thead>
+                <tr><th>Tên thẻ</th><th>Slug</th><th>Hành động</th></tr>
+            </thead>
+            <tbody>
+            {% for t in tags %}
+                <tr>
+                    <td>#{{ t.name }}</td>
+                    <td>{{ t.slug }}</td>
+                    <td>
+                        <a href="{% url 'forum:tag_edit' t.pk %}">Sửa</a>
+                        · <a class="danger-text" href="{% url 'forum:tag_delete' t.pk %}">Xóa</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="3">Chưa có thẻ nào.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

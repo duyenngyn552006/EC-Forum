@@ -1,3 +1,6 @@
+import re
+
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
@@ -124,3 +127,42 @@ class LoginCaptchaTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.session.get(LOGIN_FAILED_COUNT_SESSION_KEY, 0), 0)
+
+
+class PasswordResetEmailTests(TestCase):
+    """Quen mat khau -> gui mail chua link -> dat lai mat khau -> gui them mail xac nhan
+    (ACCOUNT_EMAIL_NOTIFICATIONS=True, xem config/settings.py)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="pwreset@due.udn.vn", password="OldPass!2345")
+
+    def test_request_reset_sends_email_with_working_link(self):
+        response = self.client.post(reverse("account_reset_password"), {"email": self.user.email})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Khôi phục mật khẩu", mail.outbox[0].subject)
+        self.assertIn("/accounts/password/reset/key/", mail.outbox[0].body)
+
+    def test_completing_reset_sends_confirmation_email_and_changes_password(self):
+        self.client.post(reverse("account_reset_password"), {"email": self.user.email})
+        link = re.search(r"(/accounts/password/reset/key/\S+)", mail.outbox[0].body).group(1)
+        redirect = self.client.get(link).headers["Location"]
+        self.client.post(redirect, {"password1": "NewPass!6789", "password2": "NewPass!6789"})
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn("đặt lại", mail.outbox[1].subject)
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewPass!6789"))
+
+
+class ChangeEmailDisabledTests(TestCase):
+    """Chan tinh nang 'Doi Email' cua allauth - form doi email mac dinh khong di qua
+    validate domain @due.udn.vn (chi ap dung luc dang ky), neu mo se cho doi sang
+    email domain bat ky (xem config/urls.py)."""
+
+    def test_account_email_url_redirects_away_instead_of_showing_change_form(self):
+        user = User.objects.create_user(email="emaillock@due.udn.vn", password="Pass1234!")
+        self.client.force_login(user)
+        response = self.client.get("/accounts/email/")
+        self.assertRedirects(response, reverse("home"))

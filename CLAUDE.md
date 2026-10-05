@@ -65,7 +65,8 @@ Vai trò lưu ở field `User.role` (choices: `student`, `lecturer`, `bch`, `sta
 9. App `dashboard`: thống kê người dùng/bài viết/tương tác, dashboard tổng quan cho Giáo vụ Khoa/BCN Khoa
 10. Bảo mật: rà soát lại rate limiting, CAPTCHA, hash mật khẩu, backup định kỳ trên toàn hệ thống
 11. Viết test cho các phần nghiệp vụ đặc thù ở mục "Quy ước code"
-12. Giao diện: dựng template theo wireframe (mục "Thiết kế mockup/wireframe" trong kế hoạch nhóm)
+12. ✅ Giao diện: dựng template theo wireframe (mục "Thiết kế mockup/wireframe" trong kế hoạch nhóm) —
+    wireframe 8 màn hình chính ở `docs/wireframes/`, giao diện thật đã dựng xong khớp bố cục
 
 ## Ghi chú phân công nhóm (tham khảo từ báo cáo tiến độ 1)
 | Thành viên | Phụ trách module |

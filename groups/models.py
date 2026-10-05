@@ -12,6 +12,7 @@ class Group(models.Model):
         PENDING = "pending", "Chờ duyệt"
         ACTIVE = "active", "Đang hoạt động"
         REJECTED = "rejected", "Bị từ chối"
+        DISABLED = "disabled", "Đã vô hiệu hóa"
 
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=170, unique=True, blank=True)

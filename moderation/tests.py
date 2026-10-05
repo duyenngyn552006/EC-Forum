@@ -124,3 +124,45 @@ class PendingContentReviewTests(TestCase):
 
         log = ModerationLog.objects.get(action=ModerationLog.Action.REJECT_CONTENT)
         self.assertEqual(log.reason, "Nội dung không phù hợp")
+
+
+class ModerationLogListViewTests(TestCase):
+    """Trang xem toan bo nhat ky kiem duyet trong giao dien EC Forum (thay the Django Admin)
+    - chi Giao vu Khoa duoc truy cap."""
+
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            email="log_staff@due.udn.vn", password="Pass1234!", role=User.Role.STAFF,
+        )
+        self.student = User.objects.create_user(email="log_student@due.udn.vn", password="Pass1234!")
+        self.target = User.objects.create_user(email="log_target@due.udn.vn", password="Pass1234!")
+        ModerationLog.objects.create(
+            actor=self.staff, action=ModerationLog.Action.LOCK_ACCOUNT,
+            reason="Vi pham noi quy", target_user=self.target,
+        )
+        ModerationLog.objects.create(
+            actor=self.staff, action=ModerationLog.Action.APPEAL_ACCEPTED,
+            reason="Chap nhan khang nghi", target_user=self.target,
+        )
+
+    def test_student_cannot_access_log_list(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("moderation:log_list"))
+        self.assertRedirects(response, reverse("home"))
+
+    def test_anonymous_cannot_access_log_list(self):
+        response = self.client.get(reverse("moderation:log_list"))
+        self.assertRedirects(response, reverse("home"))
+
+    def test_staff_can_view_all_logs(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("moderation:log_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Vi pham noi quy")
+        self.assertContains(response, "Chap nhan khang nghi")
+
+    def test_action_filter_narrows_results(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("moderation:log_list"), {"action": ModerationLog.Action.LOCK_ACCOUNT})
+        self.assertContains(response, "Vi pham noi quy")
+        self.assertNotContains(response, "Chap nhan khang nghi")

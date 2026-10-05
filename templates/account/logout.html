@@ -1,7 +1,7 @@
 {% extends "account/base_manage.html" %}
 {% load allauth %}
 {% block head_title %}Đăng xuất{% endblock head_title %}
-{% block content %}
+{% block entrance %}
     {% element h1 %}
         Đăng xuất
     {% endelement %}
@@ -9,15 +9,10 @@
         Bạn có chắc chắn muốn đăng xuất không?
     {% endelement %}
     {% url 'account_logout' as action_url %}
-    {% element form method="post" action=action_url no_visible_fields=True %}
-        {% slot body %}
-            {% csrf_token %}
-            {{ redirect_field }}
-        {% endslot %}
-        {% slot actions %}
-            {% element button type="submit" %}
-                Đăng xuất
-            {% endelement %}
-        {% endslot %}
-    {% endelement %}
-{% endblock content %}
+    <form method="post" action="{{ action_url }}" style="display:flex; gap:10px;">
+        {% csrf_token %}
+        {{ redirect_field }}
+        <button type="submit" class="btn" style="flex:1;">Có</button>
+        <a class="btn btn-secondary" href="{% url 'home' %}" style="flex:1; text-align:center; text-decoration:none;">Không</a>
+    </form>
+{% endblock entrance %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký kiểm duyệt{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Nhật ký xử lý vi phạm</h1>
+    <p>Mọi hành động kiểm duyệt (cảnh báo/ẩn/xóa/khôi phục/khóa tài khoản/duyệt-từ chối nhóm...) đều được ghi lại tại đây.</p>
+    <form method="get" class="filter-grid">
+        <div>
+            <label>Loại hành động</label>
+            <select name="action" onchange="this.form.submit()">
+                <option value="">Tất cả</option>
+                {% for value, label in action_choices %}
+                    <option value="{{ value }}" {% if value == current_action %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <div class="table-responsive" style="margin-top:14px;">
+        <table>
+            <thead>
+                <tr><th>Thời gian</th><th>Người thực hiện</th><th>Hành động</th><th>Đối tượng</th><th>Lý do</th></tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ log.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>{{ log.actor|default:"Hệ thống" }}</td>
+                    <td><span class="badge">{{ log.get_action_display }}</span></td>
+                    <td>
+                        {% if log.target_user %}{{ log.target_user }}{% elif log.content_object %}{{ log.content_object }}{% else %}—{% endif %}
+                    </td>
+                    <td>{{ log.reason|truncatewords:20 }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5">Chưa có nhật ký nào.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="filter-pills" style="justify-content:center; margin-top:14px;">
+        {% if page_obj.has_previous %}<a href="?action={{ current_action }}&page={{ page_obj.previous_page_number }}">‹ Trước</a>{% endif %}
+        <span style="padding:6px 10px;font-size:13px;color:#6b7280;">Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?action={{ current_action }}&page={{ page_obj.next_page_number }}">Sau ›</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
