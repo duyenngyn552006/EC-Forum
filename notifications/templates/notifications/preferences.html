@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt thông báo{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Cài đặt thông báo</h1>
+    <form method="post">
+        {% csrf_token %}
+        <p><label><input type="checkbox" name="notify_on_comment" {% if prefs.notify_on_comment %}checked{% endif %}> Bình luận mới</label></p>
+        <p><label><input type="checkbox" name="notify_on_like" {% if prefs.notify_on_like %}checked{% endif %}> Lượt thích mới</label></p>
+        <p><label><input type="checkbox" name="notify_on_announcement" {% if prefs.notify_on_announcement %}checked{% endif %}> Thông báo mới</label></p>
+        <p><label><input type="checkbox" name="notify_on_group_activity" {% if prefs.notify_on_group_activity %}checked{% endif %}> Hoạt động nhóm</label></p>
+        <p><label><input type="checkbox" name="notify_on_moderation" {% if prefs.notify_on_moderation %}checked{% endif %}> Kiểm duyệt / kháng nghị</label></p>
+        <p><label><input type="checkbox" name="email_digest" {% if prefs.email_digest %}checked{% endif %}> Nhận email tổng hợp</label></p>
+        <button class="btn" type="submit">Lưu</button>
+    </form>
+</div>
+{% endblock %}

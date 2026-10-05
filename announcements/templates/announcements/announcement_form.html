@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Đăng thông báo{% endblock %}
+{% block extra_head %}{{ form.media }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Đăng / sửa thông báo</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <h3>Ảnh đính kèm</h3>
+        {{ formset.management_form }}
+        {% for f in formset %}
+            {{ f.as_p }}
+        {% endfor %}
+        <button class="btn" type="submit">Lưu</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Đổi vai trò{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Đổi vai trò cho {{ target }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <select name="role">
+            {% for value, label in roles %}
+                <option value="{{ value }}" {% if target.role == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Cập nhật</button>
+    </form>
+</div>
+{% endblock %}

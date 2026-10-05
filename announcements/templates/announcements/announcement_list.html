@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Thông báo{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Thông tin / Thông báo</h1>
+    {% if user.is_authenticated and user.role in "bch,staff" %}
+        <a class="btn" href="{% url 'announcements:create' %}">+ Đăng thông báo mới</a>
+    {% endif %}
+</div>
+{% for a in announcements %}
+<div class="list-card{% if a.is_pinned %} pinned{% endif %}">
+    {% if a.featured_image %}
+        <img src="{{ a.featured_image.url }}" alt="" class="list-thumb">
+    {% else %}
+        <div class="list-avatar">{{ a.author.get_full_name|default:a.author.email|first|upper }}</div>
+    {% endif %}
+    <div class="list-body">
+        <div class="list-meta">
+            {% if a.is_pinned %}<span class="badge">📌 Đã ghim</span>{% endif %}
+            <span class="badge">{{ a.get_kind_display }}</span>
+            <span>{{ a.author }}</span>
+            <span>· {{ a.created_at|date:"d/m/Y H:i" }}</span>
+            {% if a.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+        </div>
+        <h3 class="list-title"><a href="{% url 'announcements:detail' a.pk %}">{{ a.title }}</a></h3>
+        <p class="list-excerpt">{{ a.body|striptags|truncatewords:28 }}</p>
+        {% if a.kind == "event" and a.event_datetime %}<p class="list-excerpt">🗓️ Diễn ra lúc: {{ a.event_datetime|date:"d/m/Y H:i" }}</p>{% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>Chưa có thông báo nào.</p>
+</div>
+{% endfor %}
+{% endblock %}

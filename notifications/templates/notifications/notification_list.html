@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Thông báo cá nhân{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Thông báo của bạn</h1>
+    <a class="btn btn-secondary" href="{% url 'notifications:preferences' %}">Cài đặt</a>
+    <form method="post" action="{% url 'notifications:mark_all_read' %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn btn-secondary" type="submit">Đánh dấu tất cả đã đọc</button>
+    </form>
+</div>
+{% for n in notifications %}
+<div class="card" style="{% if not n.is_read %}border-left:4px solid #10233f;{% endif %}">
+    <p>{{ n.get_verb_display }}{% if n.message %}: {{ n.message }}{% endif %}</p>
+    <p><small>{{ n.created_at|date:"d/m/Y H:i" }}</small></p>
+    {% if not n.is_read %}
+        <form method="post" action="{% url 'notifications:mark_read' n.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-secondary" type="submit">Đánh dấu đã đọc</button>
+        </form>
+    {% endif %}
+</div>
+{% empty %}
+<p>Không có thông báo nào.</p>
+{% endfor %}
+{% endblock %}

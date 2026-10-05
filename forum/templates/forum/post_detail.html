@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block content %}
+<div class="card">
+    {% if post.is_pinned %}<span class="pill">📌 Đã ghim</span>{% endif %}
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.category.name }} · {{ post.author }} · {{ post.created_at|date:"d/m/Y H:i" }}
+        {% if post.is_edited %} · <em>Đã chỉnh sửa lúc {{ post.updated_at|date:"d/m/Y H:i" }}</em>{% endif %}</p>
+    {% if post.featured_image %}<img src="{{ post.featured_image.url }}" alt="" style="max-width:100%; border-radius:10px; margin-bottom:12px;">{% endif %}
+    <div class="rich-content">{{ post.body|safe }}</div>
+
+    {% if user.is_authenticated %}
+        <div class="post-menu-wrapper">
+            <button type="button" class="post-menu-btn" onclick="togglePostMenu(event)" aria-label="Tùy chọn">•••</button>
+            <div class="post-menu-dropdown" id="postMenuDropdown" hidden>
+                {% if user == post.author or user.role == "staff" %}
+                    <a href="{% url 'forum:post_edit' post.pk %}">✏️ Sửa</a>
+                    <a class="danger-text" href="{% url 'forum:post_delete' post.pk %}">🗑️ Xóa</a>
+                {% endif %}
+                {% if user.role in "lecturer,bch,staff" %}
+                    {% if post.is_pinned %}
+                        <form method="post" action="{% url 'forum:post_unpin' post.pk %}">{% csrf_token %}<button type="submit">📌 Bỏ ghim</button></form>
+                    {% else %}
+                        <form method="post" action="{% url 'forum:post_pin' post.pk %}">{% csrf_token %}<button type="submit">📌 Ghim bài</button></form>
+                    {% endif %}
+                {% endif %}
+                <form method="post" action="{% url 'interactions:toggle_save' 'forumpost' post.pk %}">{% csrf_token %}<button type="submit">{% if user_has_saved %}🔖 Đã lưu{% else %}🔖 Lưu{% endif %}</button></form>
+                <a class="danger-text" href="{% url 'moderation:create_report' 'forumpost' post.pk %}">🚩 Báo cáo vi phạm</a>
+            </div>
+        </div>
+        {% if user.role == "staff" and post.history.count %}
+            <details style="margin-top:12px;"><summary>Lịch sử chỉnh sửa ({{ post.history.count }})</summary>
+                {% for h in post.history.all %}
+                    <p><strong>{{ h.editor }}</strong> - {{ h.edited_at|date:"d/m/Y H:i" }}<br>{{ h.title }}</p>
+                {% endfor %}
+            </details>
+        {% endif %}
+    {% endif %}
+</div>
+{% include "interactions/_interactions.html" %}
+{% endblock %}

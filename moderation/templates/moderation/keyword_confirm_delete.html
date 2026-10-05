@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Xóa từ khóa{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Xác nhận xóa từ khóa "{{ object.keyword }}"?</h1>
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Xóa</button>
+        <a class="btn btn-secondary" href="{% url 'moderation:keyword_list' %}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

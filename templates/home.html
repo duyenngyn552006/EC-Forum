@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - EC Forum{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Diễn đàn Khoa Thương mại điện tử - Marketing và Công nghệ số</h1>
+    <p>Kênh thông báo chính thức và không gian thảo luận nội bộ cho sinh viên, giảng viên, BCH Khoa và Giáo vụ Khoa.</p>
+    {% if not user.is_authenticated %}
+        <a class="btn" href="{% url 'account_signup' %}">Đăng ký ngay</a>
+        <a class="btn btn-secondary" href="{% url 'account_login' %}">Đăng nhập</a>
+    {% endif %}
+</div>
+<div class="card">
+    <h2>Điều hướng nhanh</h2>
+    <ul>
+        <li><a href="{% url 'announcements:list' %}">Thông tin / thông báo chính thức &amp; sự kiện</a></li>
+        <li><a href="{% url 'forum:post_list' %}">Diễn đàn thảo luận</a></li>
+        <li><a href="{% url 'groups:list' %}">Danh sách nhóm</a></li>
+    </ul>
+</div>
+{% endblock %}

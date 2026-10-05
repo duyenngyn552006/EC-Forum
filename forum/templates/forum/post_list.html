@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Diễn đàn{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Diễn đàn thảo luận</h1>
+    {% if user.is_authenticated %}<a class="btn" href="{% url 'forum:post_create' %}">+ Đăng bài mới</a>{% endif %}
+    <form method="get" class="search-bar" style="margin-top:12px;">
+        <input type="text" name="q" placeholder="Tìm kiếm bài viết..." value="{{ request.GET.q }}">
+        <button type="submit">Tìm</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="filter-pills">
+        <a href="{% url 'forum:post_list' %}" {% if not request.resolver_match.kwargs.category_slug %}class="active"{% endif %}>Tất cả</a>
+        {% for c in categories %}
+            <a href="{% url 'forum:post_list_by_category' c.slug %}" {% if request.resolver_match.kwargs.category_slug == c.slug %}class="active"{% endif %}>{{ c.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+{% for post in posts %}
+<div class="list-card{% if post.is_pinned %} pinned{% endif %}">
+    {% if post.featured_image %}
+        <img src="{{ post.featured_image.url }}" alt="" class="list-thumb">
+    {% else %}
+        <div class="list-avatar">{{ post.author.get_full_name|default:post.author.email|first|upper }}</div>
+    {% endif %}
+    <div class="list-body">
+        <div class="list-meta">
+            {% if post.is_pinned %}<span class="badge">📌 Đã ghim</span>{% endif %}
+            <span class="badge">{{ post.category.name }}</span>
+            <span>{{ post.author }}</span>
+            <span>· {{ post.created_at|date:"d/m/Y H:i" }}</span>
+            {% if post.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+        </div>
+        <h3 class="list-title"><a href="{% url 'forum:post_detail' post.pk %}">{{ post.title }}</a></h3>
+        <p class="list-excerpt">{{ post.body|striptags|truncatewords:28 }}</p>
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>Chưa có bài viết nào.</p>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Từ khóa nhạy cảm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Từ khóa nhạy cảm</h1>
+    <p>Bài viết/thông báo/bài nhóm/bình luận chứa 1 trong các từ khóa dưới đây sẽ tự động chuyển
+        sang trạng thái "Chờ kiểm duyệt" ngay khi đăng hoặc sửa, chờ Giáo vụ Khoa duyệt thủ công.</p>
+    <a class="btn" href="{% url 'moderation:keyword_create' %}">+ Thêm từ khóa</a>
+
+    <div class="table-responsive" style="margin-top:14px;">
+        <table>
+            <thead>
+                <tr><th>Từ khóa</th><th>Trạng thái</th><th>Ghi chú</th><th>Ngày tạo</th><th>Hành động</th></tr>
+            </thead>
+            <tbody>
+            {% for kw in keywords %}
+                <tr>
+                    <td>{{ kw.keyword }}</td>
+                    <td>
+                        {% if kw.is_active %}<span class="badge">Đang áp dụng</span>
+                        {% else %}<span class="badge">Đã tắt</span>{% endif %}
+                    </td>
+                    <td>{{ kw.note|default:"—" }}</td>
+                    <td>{{ kw.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'moderation:keyword_edit' kw.pk %}">Sửa</a>
+                        · <a class="danger-text" href="{% url 'moderation:keyword_delete' kw.pk %}">Xóa</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5">Chưa có từ khóa nào.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

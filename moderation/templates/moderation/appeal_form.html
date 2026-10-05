@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Gửi kháng nghị{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Gửi kháng nghị khóa tài khoản</h1>
+    <p>Lý do khóa: {{ user.locked_reason }}</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Gửi kháng nghị</button>
+    </form>
+</div>
+{% endblock %}

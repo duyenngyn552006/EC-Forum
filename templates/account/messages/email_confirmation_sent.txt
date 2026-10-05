@@ -1,0 +1,1 @@
+Đã gửi email xác nhận đến {{ email }}.

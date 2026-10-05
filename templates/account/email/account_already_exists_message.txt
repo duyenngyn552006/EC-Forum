@@ -1,0 +1,10 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}Bạn nhận được email này vì bạn (hoặc ai đó) đã cố đăng ký tài khoản
+bằng địa chỉ email:
+
+{{ email }}
+
+Tuy nhiên, đã có một tài khoản sử dụng địa chỉ email này. Nếu bạn quên mất mình đã có tài khoản,
+vui lòng dùng chức năng quên mật khẩu để khôi phục:
+
+{{ password_reset_url }}{% endautoescape %}{% endblock content %}

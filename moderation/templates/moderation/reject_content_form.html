@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Từ chối nội dung{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Từ chối nội dung</h1>
+    <p><strong>{{ object.title|default:"Bình luận" }}</strong> — tác giả: {{ object.author }}</p>
+    <div style="border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb; margin-bottom:16px;">
+        {% if object.body %}
+            {% if is_rich_text %}{{ object.body|safe }}{% else %}{{ object.body }}{% endif %}
+        {% else %}<em>Không có nội dung.</em>{% endif %}
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-danger" type="submit">Từ chối</button>
+        <a class="btn btn-secondary" href="{% url 'moderation:pending_content_list' %}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

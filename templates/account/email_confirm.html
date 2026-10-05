@@ -1,0 +1,37 @@
+{% extends "account/base_entrance.html" %}
+{% load account allauth %}
+{% block head_title %}Xác nhận địa chỉ email{% endblock head_title %}
+{% block entrance %}
+    {% element h1 %}
+        Xác nhận địa chỉ email
+    {% endelement %}
+    {% if confirmation %}
+        {% user_display confirmation.email_address.user as user_display %}
+        {% if can_confirm %}
+            {% element p %}
+                Vui lòng xác nhận rằng <a href="mailto:{{ confirmation.email_address.email }}">{{ confirmation.email_address.email }}</a>
+                là địa chỉ email của tài khoản {{ user_display }}.
+            {% endelement %}
+            {% url 'account_confirm_email' confirmation.key as action_url %}
+            {% element form method="post" action=action_url %}
+                {% slot actions %}
+                    {% csrf_token %}
+                    {{ redirect_field }}
+                    {% element button type="submit" %}
+                        Xác nhận
+                    {% endelement %}
+                {% endslot %}
+            {% endelement %}
+        {% else %}
+            {% element p %}
+                Không thể xác nhận vì email này đã được xác nhận bởi một tài khoản khác.
+            {% endelement %}
+        {% endif %}
+    {% else %}
+        {% url 'account_email' as email_url %}
+        {% element p %}
+            Liên kết xác nhận email này đã hết hạn hoặc không hợp lệ. Vui lòng
+            <a href="{{ email_url }}">yêu cầu gửi lại email xác nhận mới</a>.
+        {% endelement %}
+    {% endif %}
+{% endblock entrance %}

@@ -1,0 +1,1 @@
+{% autoescape off %}Xác nhận địa chỉ email của bạn{% endautoescape %}

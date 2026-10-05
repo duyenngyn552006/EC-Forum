@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Dashboard tổng quan</h1>
+</div>
+<div class="card">
+    <h3>Người dùng</h3>
+    <p>Tổng số: {{ total_users }} (mới trong 7 ngày: {{ new_users_last_7_days }})</p>
+    <ul>
+        {% for row in users_by_role %}
+            <li>{{ row.role }}: {{ row.count }}</li>
+        {% endfor %}
+    </ul>
+</div>
+<div class="card">
+    <h3>Nội dung</h3>
+    <p>Bài viết diễn đàn: {{ total_forum_posts }} (mới 7 ngày: {{ new_posts_last_7_days }})</p>
+    <p>Thông báo: {{ total_announcements }}</p>
+    <p>Bình luận: {{ total_comments }} · Lượt thích: {{ total_likes }}</p>
+</div>
+<div class="card">
+    <h3>Nhóm</h3>
+    <p>Đang hoạt động: {{ total_groups }} · Chờ duyệt: {{ pending_groups }}</p>
+</div>
+<div class="card">
+    <h3>Kiểm duyệt</h3>
+    <p>Báo cáo vi phạm chờ xử lý: {{ pending_reports }}</p>
+</div>
+{% endblock %}

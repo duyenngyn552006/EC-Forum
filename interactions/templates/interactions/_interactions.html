@@ -1,0 +1,245 @@
+{% load static %}
+<div class="card">
+    {% if user.is_authenticated %}
+        <div class="action-bar">
+            <form method="post" action="{% url 'interactions:toggle_like' model_key object.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="action-btn like-btn{% if user_has_liked %} active{% endif %}" type="submit">
+                    {% if user_has_liked %}💙{% else %}👍{% endif %} Thích
+                    {% if like_count %}<span class="count">{{ like_count }}</span>{% endif %}
+                </button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Bình luận{% if comments %} ({{ comments.count }}){% endif %}</h3>
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'interactions:add_comment' model_key object.pk %}" class="comment-composer">
+            {% csrf_token %}
+            <div class="list-avatar">{{ user.get_full_name|default:user.email|first|upper }}</div>
+            <div style="flex:1; position:relative;">
+                <textarea name="body" rows="3" placeholder="Viết bình luận... (gõ @ để gắn thẻ thành viên)" required class="js-mention-input"></textarea>
+                <div class="comment-composer-actions">
+                    <button class="btn" type="submit">Gửi bình luận</button>
+                </div>
+            </div>
+        </form>
+    {% else %}
+        <p><a href="{% url 'account_login' %}">Đăng nhập</a> để bình luận.</p>
+    {% endif %}
+
+    <div class="comment-list">
+        {% for comment in comments %}
+            <div class="comment-item">
+                <div class="list-avatar">{{ comment.author.get_full_name|default:comment.author.email|first|upper }}</div>
+                <div class="comment-main">
+                    <div class="comment-bubble" id="comment-bubble-{{ comment.pk }}">
+                        <span class="comment-author">{{ comment.author }}</span>
+                        <span class="comment-time">{{ comment.created_at|date:"d/m/Y H:i" }}{% if comment.is_edited %} · đã chỉnh sửa{% endif %}</span>
+                        {% if comment.status == "pending_review" %}<span class="pill">Chờ kiểm duyệt</span>{% endif %}
+                        <p class="comment-body">{{ comment.body }}</p>
+                    </div>
+
+                    <div class="comment-actions-row">
+                        {% if user.is_authenticated %}
+                            <button type="button" class="reply-toggle-btn" onclick="toggleReplyForm({{ comment.pk }})">Trả lời</button>
+                        {% endif %}
+                        {% if user == comment.author or user.role == "staff" %}
+                            <button type="button" class="reply-toggle-btn" onclick="toggleEditForm({{ comment.pk }})">Sửa</button>
+                            <form method="post" action="{% url 'interactions:delete_comment' comment.pk %}" style="display:inline;" onsubmit="return confirm('Xóa bình luận này?');">
+                                {% csrf_token %}
+                                <button type="submit" class="reply-toggle-btn danger-text">Xóa</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    {% if user == comment.author or user.role == "staff" %}
+                        <form method="post" action="{% url 'interactions:edit_comment' comment.pk %}" class="reply-form" id="edit-form-{{ comment.pk }}" hidden>
+                            {% csrf_token %}
+                            <div style="flex:1;">
+                                <textarea name="body" rows="2" required>{{ comment.body }}</textarea>
+                                <div class="comment-composer-actions">
+                                    <button class="btn btn-secondary" type="submit">Lưu</button>
+                                </div>
+                            </div>
+                        </form>
+                    {% endif %}
+
+                    {% if comment.replies.all %}
+                        <div class="reply-list">
+                            {% for reply in comment.replies.all %}
+                                <div class="comment-item">
+                                    <div class="list-avatar">{{ reply.author.get_full_name|default:reply.author.email|first|upper }}</div>
+                                    <div class="comment-main">
+                                        <div class="comment-bubble">
+                                            <span class="comment-author">{{ reply.author }}</span>
+                                            <span class="comment-time">{{ reply.created_at|date:"d/m/Y H:i" }}{% if reply.is_edited %} · đã chỉnh sửa{% endif %}</span>
+                                            {% if reply.status == "pending_review" %}<span class="pill">Chờ kiểm duyệt</span>{% endif %}
+                                            <p class="comment-body">{{ reply.body }}</p>
+                                        </div>
+                                        {% if user == reply.author or user.role == "staff" %}
+                                            <div class="comment-actions-row">
+                                                <button type="button" class="reply-toggle-btn" onclick="toggleEditForm({{ reply.pk }})">Sửa</button>
+                                                <form method="post" action="{% url 'interactions:delete_comment' reply.pk %}" style="display:inline;" onsubmit="return confirm('Xóa bình luận này?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="reply-toggle-btn danger-text">Xóa</button>
+                                                </form>
+                                            </div>
+                                            <form method="post" action="{% url 'interactions:edit_comment' reply.pk %}" class="reply-form" id="edit-form-{{ reply.pk }}" hidden>
+                                                {% csrf_token %}
+                                                <div style="flex:1;">
+                                                    <textarea name="body" rows="2" required>{{ reply.body }}</textarea>
+                                                    <div class="comment-composer-actions">
+                                                        <button class="btn btn-secondary" type="submit">Lưu</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'interactions:add_comment' model_key object.pk %}" class="reply-form" id="reply-form-{{ comment.pk }}" hidden>
+                            {% csrf_token %}
+                            <input type="hidden" name="parent_id" value="{{ comment.pk }}">
+                            <div class="list-avatar">{{ user.get_full_name|default:user.email|first|upper }}</div>
+                            <div style="flex:1; position:relative;">
+                                <textarea name="body" rows="2" placeholder="Viết trả lời {{ comment.author }}..." required class="js-mention-input"></textarea>
+                                <div class="comment-composer-actions">
+                                    <button class="btn btn-secondary" type="submit">Gửi trả lời</button>
+                                </div>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p>Chưa có bình luận nào.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function toggleReplyForm(commentId) {
+        var form = document.getElementById('reply-form-' + commentId);
+        if (form) {
+            form.hidden = !form.hidden;
+            if (!form.hidden) {
+                var textarea = form.querySelector('textarea');
+                if (textarea) { textarea.focus(); }
+            }
+        }
+    }
+
+    function toggleEditForm(commentId) {
+        var form = document.getElementById('edit-form-' + commentId);
+        var bubble = document.getElementById('comment-bubble-' + commentId);
+        if (form) {
+            form.hidden = !form.hidden;
+            if (bubble) { bubble.hidden = !form.hidden; }
+            if (!form.hidden) {
+                var textarea = form.querySelector('textarea');
+                if (textarea) { textarea.focus(); }
+            }
+        }
+    }
+</script>
+
+{% if mention_feed %}
+{{ mention_feed|json_script:"mentionFeedData" }}
+<style>
+    .mention-suggest-box { position: absolute; left: 0; right: 0; top: 100%; margin-top: 2px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); z-index: 50; max-height: 180px; overflow-y: auto; }
+    .mention-suggest-box[hidden] { display: none; }
+    .mention-suggest-item { padding: 8px 12px; font-size: 13.5px; cursor: pointer; }
+    .mention-suggest-item:hover, .mention-suggest-item.active { background: #eef1f5; }
+</style>
+<script>
+    (function () {
+        var MENTION_FEED = JSON.parse(document.getElementById('mentionFeedData').textContent);
+
+        function getMentionQuery(textarea) {
+            var caret = textarea.selectionStart;
+            var textBeforeCaret = textarea.value.slice(0, caret);
+            var match = textBeforeCaret.match(/@([^\s@]*)$/);
+            return match ? match[1] : null;
+        }
+
+        function initMentionAutocomplete(textarea) {
+            var box = document.createElement('div');
+            box.className = 'mention-suggest-box';
+            box.hidden = true;
+            textarea.parentNode.style.position = textarea.parentNode.style.position || 'relative';
+            textarea.parentNode.appendChild(box);
+
+            function closeBox() { box.hidden = true; box.innerHTML = ''; }
+
+            function addHiddenMentionInput(item) {
+                var form = textarea.closest('form');
+                var userId = item.id.replace('@user-', '');
+                var existing = form.querySelector('input[name="mentioned_user_ids"][value="' + userId + '"]');
+                if (!existing) {
+                    var hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'mentioned_user_ids';
+                    hidden.value = userId;
+                    hidden.dataset.mentionText = item.text;
+                    form.appendChild(hidden);
+                }
+            }
+
+            function selectItem(item) {
+                var caret = textarea.selectionStart;
+                var value = textarea.value;
+                var textBeforeCaret = value.slice(0, caret);
+                var newBefore = textBeforeCaret.replace(/@([^\s@]*)$/, item.text + ' ');
+                textarea.value = newBefore + value.slice(caret);
+                var newCaret = newBefore.length;
+                textarea.focus();
+                textarea.setSelectionRange(newCaret, newCaret);
+                addHiddenMentionInput(item);
+                closeBox();
+            }
+
+            textarea.addEventListener('input', function () {
+                var query = getMentionQuery(textarea);
+                if (query === null) { closeBox(); return; }
+                var matches = MENTION_FEED.filter(function (item) {
+                    return item.text.toLowerCase().indexOf('@' + query.toLowerCase()) === 0 || query === '';
+                }).slice(0, 6);
+                if (matches.length === 0) { closeBox(); return; }
+                box.innerHTML = '';
+                matches.forEach(function (item) {
+                    var el = document.createElement('div');
+                    el.className = 'mention-suggest-item';
+                    el.textContent = item.text;
+                    el.onclick = function () { selectItem(item); };
+                    box.appendChild(el);
+                });
+                box.hidden = false;
+            });
+
+            textarea.addEventListener('blur', function () {
+                setTimeout(closeBox, 150);
+            });
+
+            var form = textarea.closest('form');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    form.querySelectorAll('input[name="mentioned_user_ids"]').forEach(function (hidden) {
+                        if (textarea.value.indexOf(hidden.dataset.mentionText) === -1) {
+                            hidden.remove();
+                        }
+                    });
+                });
+            }
+        }
+
+        document.querySelectorAll('.js-mention-input').forEach(initMentionAutocomplete);
+    })();
+</script>
+{% endif %}

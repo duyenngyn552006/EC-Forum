@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Quản lý tài khoản{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Quản lý tài khoản</h1>
+    <div class="table-responsive">
+    <table>
+        <thead>
+            <tr><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Hành động</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.email }}</td>
+                <td>{{ u.get_role_display }}</td>
+                <td>{% if u.is_active %}Hoạt động{% else %}Đã khóa{% endif %}</td>
+                <td>
+                    <a href="{% url 'accounts:assign_role' u.pk %}">Đổi vai trò</a>
+                    <form method="post" action="{% url 'accounts:toggle_lock_account' u.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        {% if u.is_active %}
+                            <input type="text" name="reason" placeholder="Lý do khóa" required>
+                            <button class="btn btn-danger" type="submit">Khóa</button>
+                        {% else %}
+                            <button class="btn" type="submit">Mở khóa</button>
+                        {% endif %}
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

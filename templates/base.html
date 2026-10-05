@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <title>{% block title %}EC Forum{% endblock %}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #1a1a1a; }
+        header { background: #10233f; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        header a { color: #fff; text-decoration: none; margin-right: 14px; }
+        header nav a { font-size: 14px; }
+        .header-left { display: flex; align-items: center; flex-wrap: wrap; }
+        .header-right { display: flex; align-items: center; flex-wrap: wrap; }
+        main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+        .card { position: relative; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .messages { list-style: none; padding: 0; }
+        .messages li { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
+        .messages .success { background: #e3f7e9; color: #14532d; }
+        .messages .error { background: #fde8e8; color: #7f1d1d; }
+        .messages .warning { background: #fff6da; color: #78530b; }
+        .messages .info { background: #e6f0ff; color: #1e3a8a; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eef1f5; color: #1a1a1a; }
+        .btn { display: inline-block; padding: 6px 12px; border-radius: 6px; background: #10233f; color: #fff; text-decoration: none; border: none; cursor: pointer; transition: background 0.15s; font: inherit; font-size: 14px; line-height: 1.5; vertical-align: middle; }
+        .btn:hover { background: #16305c; }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #57606f; }
+        .btn-success { background: #15803d; }
+        .btn-success:hover { background: #116932; }
+        .btn-danger { background: #b91c1c; }
+        .btn-danger:hover { background: #991414; }
+
+        /* Input/textarea/select dung chung cho toan bo form (form.as_p khong tu co class) */
+        form label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; color: #1a1a1a; }
+        form p { margin: 0 0 16px; }
+        input[type=text], input[type=email], input[type=password], input[type=number],
+        input[type=date], input[type=time], input[type=url], input[type=tel], input[type=search],
+        textarea, select {
+            width: 100%; max-width: 480px; box-sizing: border-box; padding: 9px 12px;
+            border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit;
+            background: #fff; color: #1a1a1a; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus,
+        input[type=date]:focus, input[type=time]:focus, input[type=url]:focus, input[type=tel]:focus,
+        input[type=search]:focus, textarea:focus, select:focus {
+            outline: none; border-color: #10233f; box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.12);
+        }
+        textarea { min-height: 100px; resize: vertical; }
+        select { cursor: pointer; }
+        input[type=checkbox], input[type=radio] { width: auto; max-width: none; margin-right: 6px; }
+        input::placeholder, textarea::placeholder { color: #9ca3af; }
+
+        /* Thanh tim kiem gop input + nut thanh 1 khoi bo tron */
+        .search-bar { display: flex; align-items: stretch; max-width: 420px; border: 1px solid #d1d5db; border-radius: 999px; overflow: hidden; background: #fff; transition: box-shadow 0.15s, border-color 0.15s; }
+        .search-bar:focus-within { border-color: #10233f; box-shadow: 0 0 0 3px rgba(16,35,63,0.12); }
+        .search-bar input { flex: 1; border: none; outline: none; padding: 9px 16px; font-size: 14px; background: none; }
+        .search-bar button { border: none; background: #10233f; color: #fff; padding: 0 18px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .search-bar button:hover { background: #16305c; }
+
+        /* O tim kiem o header + dropdown goi y tu lich su tim kiem cua user */
+        .header-search-bar { max-width: 220px; margin-left: 12px; position: relative; }
+        .search-suggest-box { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); z-index: 60; overflow: hidden; }
+        .search-suggest-box[hidden] { display: none; }
+        .search-suggest-item { padding: 8px 12px; font-size: 13px; color: #1a1a1a; cursor: pointer; }
+        .search-suggest-item:hover { background: #eef1f5; }
+
+        /* Luoi bo loc nhieu field (trang ket qua tim kiem) */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; }
+
+        /* Pill loc chuyen muc */
+        .filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .filter-pills a { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #eef1f5; color: #1a1a1a !important; text-decoration: none; font-size: 13px; margin-right: 0 !important; transition: background 0.15s, color 0.15s; }
+        .filter-pills a:hover { background: #dde3ea; }
+        .filter-pills a.active { background: #10233f; color: #fff !important; }
+
+        /* Tab bar dang gach chan (vd tab Thao luan/Thanh vien trong trang nhom) */
+        .tab-bar { display: flex; flex-wrap: wrap; gap: 28px; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px; }
+        .tab-bar button { background: none; border: none; padding: 10px 2px; font-size: 14.5px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; font-family: inherit; }
+        .tab-bar button:hover { color: #10233f; }
+        .tab-bar button.active { color: #10233f; border-bottom-color: #10233f; }
+        .tab-panel[hidden] { display: none; }
+
+        /* Anh bia + logo/avatar tron - dung chung cho trang ho so ca nhan va trang nhom */
+        .cover-header { position: relative; margin-bottom: 56px; }
+        .cover-banner { height: 200px; border-radius: 8px; background: linear-gradient(135deg, #10233f, #2c4a7c); background-size: cover; background-position: center; }
+        .cover-avatar { position: absolute; left: 24px; bottom: -40px; width: 96px; height: 96px; border-radius: 50%; border: 4px solid #f5f6f8; background: #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden; }
+        .cover-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* The danh sach bai viet/thong bao/nhom - co avatar, hover noi len */
+        .list-card { display: flex; gap: 14px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; margin-bottom: 12px; transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s; }
+        .list-card:hover { box-shadow: 0 6px 18px rgba(16,35,63,0.12); transform: translateY(-1px); border-color: #c7d0dc; }
+        .list-card.pinned { border-left: 4px solid #10233f; }
+        .list-avatar { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: #10233f; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; overflow: hidden; }
+        .list-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        /* Anh dai dien bai dang - vuong bo goc nhe, khac avatar tron cua nguoi dung */
+        .list-thumb { flex-shrink: 0; width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #eef1f5; }
+        .list-body { flex: 1; min-width: 0; }
+        .list-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+        .list-title a { color: #10233f !important; text-decoration: none; }
+        .list-title a:hover { text-decoration: underline; }
+        .list-meta { font-size: 12.5px; color: #6b7280; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+        .list-meta .badge { background: #eef1f5; color: #1a1a1a; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; }
+        .list-excerpt { font-size: 13.5px; color: #4b5563; margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+        /* Thanh nut tuong tac (thich/luu/bao cao) duoi 1 bai viet/thong bao */
+        .action-bar { display: flex; flex-wrap: wrap; gap: 10px; }
+        .action-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px; border: 1px solid #d1d5db; background: #fff; color: #374151; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+        .action-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+        .action-btn.like-btn.active { background: #eaf1ff; border-color: #2563eb; color: #2563eb; }
+        .action-btn.save-btn.active { background: #fff7e6; border-color: #d97706; color: #b45309; }
+        .action-btn.report-btn, .action-btn.danger-outline { color: #b91c1c; border-color: #fca5a5; }
+        .action-btn.report-btn:hover, .action-btn.danger-outline:hover { background: #fef2f2; border-color: #ef4444; }
+        .action-btn.primary-outline { color: #10233f; border-color: #10233f; }
+        .action-btn.primary-outline:hover { background: #eef1f8; }
+        .action-btn.pin-btn.active { background: #fff7e6; border-color: #d97706; color: #b45309; }
+        .action-btn .count { font-weight: 700; }
+        .manage-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+        /* Menu "..." goc tren ben phai bai viet - bam mo dropdown Sua/Xoa/Ghim */
+        .post-menu-wrapper { position: absolute; top: 12px; right: 12px; }
+        .post-menu-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #374151; color: #fff; font-size: 18px; letter-spacing: 1px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .post-menu-btn:hover { background: #4b5563; }
+        .post-menu-dropdown { position: absolute; right: 0; top: 38px; min-width: 170px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 90; padding: 6px 0; }
+        .post-menu-dropdown[hidden] { display: none; }
+        .post-menu-dropdown a, .post-menu-dropdown button { display: block; width: 100%; box-sizing: border-box; text-align: left; padding: 8px 16px; font-size: 14px; color: #1a1a1a !important; background: none; border: none; cursor: pointer; margin-right: 0 !important; text-decoration: none; font-family: inherit; }
+        .post-menu-dropdown a:hover, .post-menu-dropdown button:hover { background: #f5f6f8; }
+        .post-menu-dropdown .danger-text { color: #b91c1c !important; }
+
+        /* Khung binh luan */
+        .comment-composer { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px; }
+        .comment-composer textarea { flex: 1; max-width: none; margin-bottom: 8px; }
+        .comment-composer-actions { display: flex; justify-content: flex-end; }
+        .comment-list { display: flex; flex-direction: column; gap: 4px; }
+        .comment-item { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid #f1f2f4; }
+        .comment-item:first-child { border-top: none; }
+        .comment-bubble { flex: 1; background: #f5f6f8; border-radius: 12px; padding: 10px 14px; }
+        .comment-author { font-weight: 600; font-size: 13.5px; }
+        .comment-time { font-size: 11.5px; color: #6b7280; margin-left: 6px; font-weight: 400; }
+        .comment-body { font-size: 14px; margin: 4px 0 0; color: #1f2937; }
+        .comment-main { flex: 1; min-width: 0; }
+        .reply-toggle-btn { background: none; border: none; color: #6b7280; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
+        .reply-toggle-btn:hover { color: #10233f; text-decoration: underline; }
+        .reply-toggle-btn.danger-text { color: #b91c1c; }
+        .reply-toggle-btn.danger-text:hover { color: #7f1414; }
+        .comment-actions-row { display: flex; gap: 14px; margin-top: 2px; }
+        .reply-list { margin-left: 28px; }
+        .reply-list .comment-item { padding: 8px 0; }
+        .reply-form { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 4px 28px; }
+        .reply-form[hidden] { display: none; }
+        .reply-form textarea { flex: 1; max-width: none; margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; }
+        table th, table td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .rich-content img { max-width: 100%; height: auto; border-radius: 6px; }
+        .rich-content h2, .rich-content h3, .rich-content h4 { margin: 16px 0 8px; }
+        .rich-content ul, .rich-content ol { padding-left: 24px; }
+        .rich-content blockquote { border-left: 3px solid #cbd5e1; margin: 8px 0; padding: 4px 12px; color: #475569; }
+        .rich-content a { color: #10233f; }
+        .brand-logo { height: 32px; display: block; margin-right: 20px; }
+
+        .notif-bell-wrapper { position: relative; display: inline-block; margin-right: 14px; }
+        .bell-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 4px 6px; position: relative; }
+        .bell-badge { position: absolute; top: -2px; right: -2px; background: #dc2626; color: #fff; font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 999px; font-weight: bold; }
+        .notif-dropdown { position: absolute; right: 0; top: 36px; width: 340px; max-width: 90vw; background: #fff; color: #1a1a1a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; overflow: hidden; }
+        .notif-dropdown-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid #e5e7eb; }
+        .notif-dropdown-header strong { font-size: 16px; }
+        .notif-markall { background: none; border: none; color: #10233f; font-size: 12px; cursor: pointer; padding: 0; }
+        .notif-tabs { display: flex; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #e5e7eb; }
+        .notif-tab { border: none; background: #eef1f5; color: #1a1a1a; padding: 6px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+        .notif-tab.active { background: #10233f; color: #fff; }
+        .notif-list { max-height: 360px; overflow-y: auto; }
+        .notif-item { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; text-decoration: none; color: #1a1a1a; border-bottom: 1px solid #f1f2f4; }
+        .notif-item:hover { background: #f5f6f8; }
+        .notif-item.unread { background: #eaf1ff; }
+        .notif-body { flex: 1; }
+        .notif-text { display: block; font-size: 13px; }
+        .notif-time { display: block; font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .notif-dot { width: 8px; height: 8px; border-radius: 999px; background: #2563eb; margin-top: 4px; flex-shrink: 0; }
+        .notif-empty { padding: 20px 14px; text-align: center; color: #6b7280; font-size: 13px; }
+        .notif-viewall { display: block; text-align: center; padding: 10px; font-size: 13px; color: #10233f; text-decoration: none; border-top: 1px solid #e5e7eb; }
+        .notif-viewall:hover { background: #f5f6f8; }
+
+        /* Nav dang chu - chi hien tren laptop/PC (an tren dien thoai) */
+        .desktop-nav { display: flex; align-items: center; flex-wrap: wrap; }
+        .admin-menu-wrapper { position: relative; display: inline-block; }
+        .admin-menu-btn { background: none; border: none; color: #fff; font-size: 14px; cursor: pointer; padding: 6px 4px; font-family: inherit; }
+        .admin-dropdown { position: absolute; left: 0; top: 30px; min-width: 200px; max-width: 90vw; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; padding: 6px 0; }
+        .admin-dropdown[hidden] { display: none; }
+        .admin-dropdown a { display: block; color: #1a1a1a !important; padding: 8px 16px; font-size: 14px; margin-right: 0 !important; }
+        .admin-dropdown a:hover { background: #f5f6f8; }
+
+        /* Icon luoi 3x3 mo panel menu (kieu "waffle menu") - chi hien tren dien thoai */
+        .grid-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; grid-template-columns: repeat(3, 5px); grid-template-rows: repeat(3, 5px); gap: 3px; align-content: center; justify-content: center; }
+        .grid-menu-btn .dot { width: 5px; height: 5px; background: #fff; border-radius: 1px; }
+
+        /* Panel menu truot tu ben phai */
+        .nav-panel-overlay { position: fixed; inset: 0; background: rgba(16, 35, 63, 0.55); z-index: 250; display: flex; justify-content: flex-end; }
+        .nav-panel-overlay[hidden] { display: none; }
+        .nav-panel { background: #fff; color: #1a1a1a; width: 320px; max-width: 85vw; height: 100%; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,0.25); position: relative; padding: 20px 0; }
+        .nav-panel-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 26px; line-height: 1; color: #9ca3af; cursor: pointer; }
+        .nav-panel-close:hover { color: #10233f; }
+        .nav-panel-logo { text-align: center; padding: 8px 24px 20px; border-bottom: 1px solid #eee; }
+        .nav-panel-logo img { height: 34px; }
+        .nav-panel-list { display: flex; flex-direction: column; }
+        .nav-panel-list a, .nav-panel-accordion-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; padding: 14px 24px; color: #1a1a1a !important; text-decoration: none; border: none; border-top: 1px solid #eee; background: none; font-size: 15px; font-family: inherit; text-align: left; cursor: pointer; margin-right: 0 !important; }
+        .nav-panel-list a:hover, .nav-panel-accordion-btn:hover { background: #f5f6f8; }
+        .nav-panel-accordion-btn .chevron { transition: transform 0.2s; color: #6b7280; }
+        .nav-panel-accordion-btn.open .chevron { transform: rotate(180deg); }
+        .nav-panel-submenu { display: flex; flex-direction: column; background: #f9fafb; }
+        .nav-panel-submenu[hidden] { display: none; }
+        .nav-panel-submenu a { padding: 12px 24px 12px 40px; font-size: 14px; color: #374151 !important; border-top: 1px solid #eee; }
+        .nav-panel-submenu a:hover { background: #eef1f5; }
+
+        /* Gop ten + vai tro thanh 1 khoi gon, bam vao hien dropdown dang xuat */
+        .user-menu-wrapper { position: relative; }
+        .user-menu-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border: none; color: #fff; cursor: pointer; font-family: inherit; padding: 4px 8px; line-height: 1.3; margin-right: 6px; }
+        .user-menu-btn .user-name { font-size: 13px; }
+        .user-dropdown { position: absolute; right: 0; top: 40px; min-width: 180px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; padding: 6px 0; }
+        .user-dropdown[hidden] { display: none; }
+        .user-dropdown a { display: block; color: #1a1a1a !important; padding: 8px 16px; font-size: 14px; margin-right: 0 !important; }
+        .user-dropdown a:hover { background: #f5f6f8; }
+
+        /* Responsive - man hinh nho (dien thoai): doi nav chu -> icon luoi + panel.
+           Khoi ten/vai tro gop dropdown dang xuat thi dung chung cho ca PC lan dien thoai. */
+        @media (max-width: 640px) {
+            header { padding: 10px 16px; }
+            main { padding: 0 12px; margin: 16px auto; }
+            .card { padding: 12px; }
+            .notif-dropdown { left: 0; right: auto; width: 90vw; }
+            .auth-modal-card { padding: 24px 18px; }
+
+            .desktop-nav { display: none; }
+            .header-search-bar { display: none; }
+            .grid-menu-btn { display: grid; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+    <div class="header-left">
+        <a href="{% url 'home' %}"><img src="{% static 'img/logo-ngang-white.png' %}" alt="EC Forum" class="brand-logo"></a>
+        <nav class="desktop-nav">
+            <a href="{% url 'announcements:list' %}">Thông báo của Khoa</a>
+            <a href="{% url 'forum:post_list' %}">Diễn đàn</a>
+            <a href="{% url 'groups:list' %}">Nhóm</a>
+            {% if user.is_authenticated %}
+                {% if user.role == 'staff' %}
+                    <div class="admin-menu-wrapper">
+                        <button type="button" class="admin-menu-btn" onclick="toggleAdminMenu(event)">Quản trị ▾</button>
+                        <div class="admin-dropdown" id="adminDropdown" hidden>
+                            <a href="{% url 'dashboard:overview' %}">Dashboard</a>
+                            <a href="{% url 'accounts:user_list' %}">Quản lý tài khoản</a>
+                            <a href="{% url 'groups:pending_list' %}">Duyệt nhóm</a>
+                            <a href="{% url 'moderation:pending_content_list' %}">Duyệt nội dung</a>
+                            <a href="{% url 'moderation:report_list' %}">Báo cáo vi phạm</a>
+                            <a href="{% url 'moderation:appeal_list' %}">Kháng nghị</a>
+                            <a href="{% url 'moderation:keyword_list' %}">Từ khóa nhạy cảm</a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </nav>
+        <form method="get" action="{% url 'search:results' %}" class="search-bar header-search-bar">
+            <input type="text" name="q" id="headerSearchInput" placeholder="Tìm kiếm..." autocomplete="off">
+            <button type="submit" aria-label="Tìm kiếm">🔍</button>
+        </form>
+        {% if header_recent_searches %}{{ header_recent_searches|json_script:"headerRecentSearchesData" }}{% endif %}
+        <button type="button" class="grid-menu-btn" onclick="toggleNavPanel(event)" aria-label="Menu">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </button>
+    </div>
+    <div class="header-right">
+        {% if user.is_authenticated %}
+            <div class="notif-bell-wrapper">
+                <button type="button" class="bell-btn" onclick="toggleNotifDropdown(event)" aria-label="Thông báo">
+                    🔔
+                    {% if bell_unread_count > 0 %}
+                        <span class="bell-badge">{{ bell_unread_count }}</span>
+                    {% endif %}
+                </button>
+                <div class="notif-dropdown" id="notifDropdown" hidden>
+                    <div class="notif-dropdown-header">
+                        <strong>Thông báo</strong>
+                        <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="notif-markall">Đánh dấu tất cả đã đọc</button>
+                        </form>
+                    </div>
+                    <div class="notif-tabs">
+                        <button type="button" class="notif-tab active" onclick="filterNotifTab(this, 'all')">Tất cả</button>
+                        <button type="button" class="notif-tab" onclick="filterNotifTab(this, 'unread')">Chưa đọc</button>
+                    </div>
+                    <div class="notif-list">
+                        {% for n in bell_notifications %}
+                            <a href="{% url 'notifications:click' n.pk %}" class="notif-item{% if not n.is_read %} unread{% endif %}" data-read="{{ n.is_read|yesno:'1,0' }}">
+                                <span class="notif-body">
+                                    <span class="notif-text">{% if n.message %}{{ n.message }}{% else %}{{ n.get_verb_display }}{% endif %}</span>
+                                    <span class="notif-time">{{ n.created_at|timesince }} trước</span>
+                                </span>
+                                {% if not n.is_read %}<span class="notif-dot"></span>{% endif %}
+                            </a>
+                        {% empty %}
+                            <p class="notif-empty">Không có thông báo nào.</p>
+                        {% endfor %}
+                    </div>
+                    <a href="{% url 'notifications:list' %}" class="notif-viewall">Xem tất cả</a>
+                </div>
+            </div>
+            <div class="user-menu-wrapper">
+                <button type="button" class="user-menu-btn" onclick="toggleUserMenu(event)">
+                    <span class="user-name">{{ user }}</span>
+                    <span class="pill">{{ user.get_role_display }}</span>
+                </button>
+                <div class="user-dropdown" id="userDropdown" hidden>
+                    <a href="{% url 'accounts:my_profile' %}">Hồ sơ của tôi</a>
+                    <a href="{% url 'account_logout' %}">Đăng xuất</a>
+                </div>
+            </div>
+        {% else %}
+            <a href="{% url 'account_login' %}">Đăng nhập</a>
+            <a href="{% url 'account_signup' %}">Đăng ký</a>
+        {% endif %}
+    </div>
+</header>
+<div class="nav-panel-overlay" id="navPanelOverlay" hidden onclick="document.getElementById('navPanelOverlay').hidden = true;">
+    <div class="nav-panel" onclick="event.stopPropagation();">
+        <button type="button" class="nav-panel-close" onclick="toggleNavPanel(event)" aria-label="Đóng">&times;</button>
+        <div class="nav-panel-logo">
+            <img src="{% static 'img/logo-ngang.png' %}" alt="EC Forum">
+        </div>
+        <nav class="nav-panel-list">
+            <a href="{% url 'search:results' %}">Tìm kiếm</a>
+            <a href="{% url 'announcements:list' %}">Thông báo của Khoa</a>
+            <a href="{% url 'forum:post_list' %}">Diễn đàn</a>
+            <a href="{% url 'groups:list' %}">Nhóm</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'notifications:list' %}">Thông báo cá nhân</a>
+                {% if user.role == 'staff' %}
+                    <button type="button" class="nav-panel-accordion-btn" onclick="toggleAccordion(this)">
+                        Quản trị <span class="chevron">▾</span>
+                    </button>
+                    <div class="nav-panel-submenu" hidden>
+                        <a href="{% url 'dashboard:overview' %}">Dashboard</a>
+                        <a href="{% url 'accounts:user_list' %}">Quản lý tài khoản</a>
+                        <a href="{% url 'groups:pending_list' %}">Duyệt nhóm</a>
+                        <a href="{% url 'moderation:pending_content_list' %}">Duyệt nội dung</a>
+                        <a href="{% url 'moderation:report_list' %}">Báo cáo vi phạm</a>
+                        <a href="{% url 'moderation:appeal_list' %}">Kháng nghị</a>
+                        <a href="{% url 'moderation:keyword_list' %}">Từ khóa nhạy cảm</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </nav>
+    </div>
+</div>
+<main>
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+<script>
+    function toggleNotifDropdown(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('notifDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function toggleNavPanel(event) {
+        event.stopPropagation();
+        var overlay = document.getElementById('navPanelOverlay');
+        if (overlay) {
+            overlay.hidden = !overlay.hidden;
+        }
+    }
+
+    function toggleAccordion(button) {
+        var submenu = button.nextElementSibling;
+        if (submenu) {
+            submenu.hidden = !submenu.hidden;
+            button.classList.toggle('open', !submenu.hidden);
+        }
+    }
+
+    function toggleUserMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('userDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function toggleAdminMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('adminDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function togglePostMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('postMenuDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function filterNotifTab(button, filter) {
+        document.querySelectorAll('.notif-tab').forEach(function (b) { b.classList.remove('active'); });
+        button.classList.add('active');
+        document.querySelectorAll('.notif-item').forEach(function (item) {
+            item.hidden = (filter === 'unread' && item.dataset.read === '1');
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        var dropdown = document.getElementById('notifDropdown');
+        var wrapper = document.querySelector('.notif-bell-wrapper');
+        if (dropdown && !dropdown.hidden && wrapper && !wrapper.contains(event.target)) {
+            dropdown.hidden = true;
+        }
+        var userDropdown = document.getElementById('userDropdown');
+        var userWrapper = document.querySelector('.user-menu-wrapper');
+        if (userDropdown && !userDropdown.hidden && userWrapper && !userWrapper.contains(event.target)) {
+            userDropdown.hidden = true;
+        }
+        var adminDropdown = document.getElementById('adminDropdown');
+        var adminWrapper = document.querySelector('.admin-menu-wrapper');
+        if (adminDropdown && !adminDropdown.hidden && adminWrapper && !adminWrapper.contains(event.target)) {
+            adminDropdown.hidden = true;
+        }
+        var postMenuDropdown = document.getElementById('postMenuDropdown');
+        var postMenuWrapper = document.querySelector('.post-menu-wrapper');
+        if (postMenuDropdown && !postMenuDropdown.hidden && postMenuWrapper && !postMenuWrapper.contains(event.target)) {
+            postMenuDropdown.hidden = true;
+        }
+    });
+
+    (function initHeaderSearchSuggest() {
+        var input = document.getElementById('headerSearchInput');
+        var dataEl = document.getElementById('headerRecentSearchesData');
+        if (!input || !dataEl) {
+            return;
+        }
+        var recentSearches = JSON.parse(dataEl.textContent);
+        var form = input.closest('form');
+        var box = document.createElement('div');
+        box.className = 'search-suggest-box';
+        box.hidden = true;
+        form.appendChild(box);
+
+        function renderSuggestions() {
+            var term = input.value.trim().toLowerCase();
+            var items = term
+                ? recentSearches.filter(function (q) { return q.toLowerCase().indexOf(term) !== -1; })
+                : recentSearches;
+            box.innerHTML = '';
+            items.forEach(function (text) {
+                var item = document.createElement('div');
+                item.className = 'search-suggest-item';
+                item.textContent = text;
+                item.addEventListener('mousedown', function (event) {
+                    event.preventDefault();
+                    input.value = text;
+                    form.submit();
+                });
+                box.appendChild(item);
+            });
+            box.hidden = items.length === 0;
+        }
+
+        input.addEventListener('focus', renderSuggestions);
+        input.addEventListener('input', renderSuggestions);
+        document.addEventListener('click', function (event) {
+            if (!form.contains(event.target)) {
+                box.hidden = true;
+            }
+        });
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+{% block content %}{% autoescape off %}{% user_display user as user_display %}Bạn nhận được email này vì tài khoản {{ user_display }} đã đăng ký sử dụng địa chỉ email này trên {{ current_site.domain }}.
+
+{% if code %}Mã xác thực email của bạn được liệt kê bên dưới. Vui lòng nhập mã này vào cửa sổ trình duyệt đang mở.
+
+{{ code }}{% else %}Để xác nhận đây là email của bạn, hãy truy cập liên kết sau:
+
+{{ activate_url }}{% endif %}{% endautoescape %}{% endblock content %}

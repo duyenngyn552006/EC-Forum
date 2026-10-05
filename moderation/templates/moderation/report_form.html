@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo vi phạm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Báo cáo vi phạm</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-danger" type="submit">Gửi báo cáo</button>
+    </form>
+</div>
+{% endblock %}

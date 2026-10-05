@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Xem xét kháng nghị{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Kháng nghị của {{ appeal.user }}</h1>
+    <p>Lý do khóa: {{ appeal.user.locked_reason }}</p>
+    <p>Nội dung kháng nghị: {{ appeal.reason }}</p>
+    {% if appeal.extra_info %}<p>Thông tin bổ sung: {{ appeal.extra_info }}</p>{% endif %}
+</div>
+
+<div class="card">
+    <h3>Lịch sử vi phạm</h3>
+    {% for log in violation_history %}
+        <p>{{ log.get_action_display }} - {{ log.created_at|date:"d/m/Y H:i" }} - {{ log.reason }}</p>
+    {% empty %}
+        <p>Không có lịch sử vi phạm.</p>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Xác nhận</button>
+    </form>
+</div>
+{% endblock %}

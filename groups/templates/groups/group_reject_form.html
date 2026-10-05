@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Từ chối yêu cầu tạo nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Từ chối yêu cầu tạo nhóm "{{ group.name }}"</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-danger" type="submit">Từ chối</button>
+    </form>
+</div>
+{% endblock %}

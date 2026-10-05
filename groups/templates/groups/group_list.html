@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Danh sách nhóm</h1>
+    {% if user.is_authenticated %}<a class="btn" href="{% url 'groups:create' %}">+ Tạo nhóm mới</a>{% endif %}
+</div>
+{% for g in groups %}
+<div class="list-card">
+    <div class="list-avatar">
+        {% if g.logo %}<img src="{{ g.logo.url }}" alt="{{ g.name }}">{% else %}{{ g.name|first|upper }}{% endif %}
+    </div>
+    <div class="list-body">
+        <div class="list-meta">
+            <span>Tạo bởi {{ g.created_by }}</span>
+            <span>· {{ g.created_at|date:"d/m/Y" }}</span>
+            <span class="badge">{{ g.memberships.count }} thành viên</span>
+        </div>
+        <h3 class="list-title"><a href="{% url 'groups:detail' g.slug %}">{{ g.name }}</a></h3>
+        <p class="list-excerpt">{{ g.description|truncatewords:30 }}</p>
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>Chưa có nhóm nào.</p>
+</div>
+{% endfor %}
+{% endblock %}

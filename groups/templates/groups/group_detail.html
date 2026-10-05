@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block content %}
+<div class="cover-header">
+    <div class="cover-banner" {% if group.cover_image %}style="background-image: url('{{ group.cover_image.url }}');"{% endif %}></div>
+    <div class="cover-avatar">
+        {% if group.logo %}
+            <img src="{{ group.logo.url }}" alt="{{ group.name }}">
+        {% else %}
+            {{ group.name|first|upper }}
+        {% endif %}
+    </div>
+</div>
+<div class="card">
+    <h1>{{ group.name }}</h1>
+    <p>{{ group.description|linebreaks }}</p>
+    <p>Tạo bởi {{ group.created_by }} · {{ group.created_at|date:"d/m/Y" }}</p>
+    {% if is_member %}
+        <a class="btn" href="{% url 'groups:post_create' group.slug %}">+ Đăng bài trong nhóm</a>
+    {% endif %}
+</div>
+
+<div class="tab-bar">
+    <button type="button" class="active" onclick="switchGroupTab(this, 'tab-discussion')">Bài viết trong nhóm</button>
+    <button type="button" onclick="switchGroupTab(this, 'tab-members')">Thành viên ({{ group.memberships.count }})</button>
+</div>
+
+<div id="tab-discussion" class="tab-panel">
+    {% for p in posts %}
+    <div class="list-card">
+        {% if p.featured_image %}
+            <img src="{{ p.featured_image.url }}" alt="" class="list-thumb">
+        {% else %}
+            <div class="list-avatar">{{ p.author.get_full_name|default:p.author.email|first|upper }}</div>
+        {% endif %}
+        <div class="list-body">
+            <div class="list-meta">
+                <span>{{ p.author }}</span>
+                <span>· {{ p.created_at|date:"d/m/Y H:i" }}</span>
+                {% if p.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+            </div>
+            <h3 class="list-title"><a href="{% url 'groups:post_detail' group.slug p.pk %}">{{ p.title }}</a></h3>
+            <p class="list-excerpt">{{ p.body|striptags|truncatewords:28 }}</p>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card">
+        <p>Chưa có bài đăng.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div id="tab-members" class="tab-panel" hidden>
+    <div class="card">
+        <ul>
+            {% for m in group.memberships.all %}
+                <li>{{ m.user }} - {{ m.get_role_display }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<script>
+    function switchGroupTab(button, panelId) {
+        document.querySelectorAll('.tab-bar button').forEach(function (b) { b.classList.remove('active'); });
+        button.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.hidden = true; });
+        document.getElementById(panelId).hidden = false;
+    }
+</script>
+{% endblock %}

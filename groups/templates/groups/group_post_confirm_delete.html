@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Xóa bài viết{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Xác nhận xóa bài viết "{{ post.title }}"?</h1>
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Xóa</button>
+        <a class="btn btn-secondary" href="{{ post.get_absolute_url }}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

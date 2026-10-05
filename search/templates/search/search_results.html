@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Tìm kiếm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Tìm kiếm</h1>
+    <form method="get" class="search-bar" style="margin-top:12px;max-width:100%;">
+        <input type="text" name="q" placeholder="Tìm kiếm trên toàn hệ thống..." value="{{ query }}">
+        <button type="submit">Tìm</button>
+    </form>
+
+    {% if recent_searches %}
+    <div style="margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <span style="font-size:13px;color:#6b7280;">Tìm gần đây:</span>
+        <div class="filter-pills">
+            {% for rq in recent_searches %}
+                <a href="{% url 'search:results' %}?q={{ rq|urlencode }}">{{ rq }}</a>
+            {% endfor %}
+        </div>
+        <form method="post" action="{% url 'search:clear_history' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">Xóa lịch sử</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <form method="get" class="filter-grid">
+        {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+        <div>
+            <label>Loại nội dung</label>
+            <select name="type">
+                <option value="">Tất cả</option>
+                {% for key, label in content_type_choices %}
+                    <option value="{{ key }}" {% if content_type == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Danh mục (diễn đàn)</label>
+            <select name="category">
+                <option value="">Tất cả</option>
+                {% for c in categories %}
+                    <option value="{{ c.slug }}" {% if category_slug == c.slug %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Tác giả / người đăng</label>
+            <input type="text" name="author" value="{{ author }}" placeholder="Tên hoặc email">
+        </div>
+        <div>
+            <label>Lớp</label>
+            <input type="text" name="class_name" value="{{ class_name }}" placeholder="VD: 23K5">
+        </div>
+        <div>
+            <label>Từ ngày</label>
+            <input type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div>
+            <label>Đến ngày</label>
+            <input type="date" name="date_to" value="{{ date_to }}">
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button type="submit" class="btn">Lọc</button>
+            {% if has_filters %}<a href="{% url 'search:results' %}" class="btn btn-secondary">Xóa lọc</a>{% endif %}
+        </div>
+    </form>
+</div>
+
+{% for r in page_obj %}
+<div class="list-card">
+    {% if r.object.featured_image %}
+        <img src="{{ r.object.featured_image.url }}" alt="" class="list-thumb">
+    {% else %}
+        <div class="list-avatar">{{ r.author.get_full_name|default:r.author.email|first|upper }}</div>
+    {% endif %}
+    <div class="list-body">
+        <div class="list-meta">
+            <span class="badge">{{ r.type_label }}</span>
+            <span>{{ r.author }}</span>
+            {% if r.author.class_name %}<span>· Lớp {{ r.author.class_name }}</span>{% endif %}
+            <span>· {{ r.created_at|date:"d/m/Y H:i" }}</span>
+            {% if r.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+        </div>
+        <h3 class="list-title"><a href="{{ r.url }}">{{ r.object.title }}</a></h3>
+        <p class="list-excerpt">{{ r.object.body|striptags|truncatewords:28 }}</p>
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>{% if has_filters %}Không tìm thấy kết quả phù hợp.{% else %}Nhập từ khóa hoặc chọn bộ lọc để tìm kiếm.{% endif %}</p>
+</div>
+{% endfor %}
+
+{% if page_obj.has_other_pages %}
+<div class="filter-pills" style="justify-content:center;">
+    {% if page_obj.has_previous %}<a href="?{{ querystring }}&page={{ page_obj.previous_page_number }}">‹ Trước</a>{% endif %}
+    <span style="padding:6px 10px;font-size:13px;color:#6b7280;">Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?{{ querystring }}&page={{ page_obj.next_page_number }}">Sau ›</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
