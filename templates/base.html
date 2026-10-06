@@ -66,7 +66,7 @@
         .search-suggest-item:hover { background: #eef1f5; }
 
         /* Luoi bo loc nhieu field (trang ket qua tim kiem) */
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 220px)); gap: 12px; align-items: end; }
 
         /* Pill loc chuyen muc */
         .filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -389,13 +389,33 @@
     </div>
 </div>
 {% endif %}
+<div class="confirm-modal-overlay" id="deleteConfirmOverlay" hidden onclick="hideDeleteConfirm(event)">
+    <div class="confirm-modal-card" onclick="event.stopPropagation();">
+        <h2 id="deleteConfirmTitle">Xác nhận xóa?</h2>
+        <div class="confirm-modal-actions">
+            <form method="post" id="deleteConfirmForm" style="flex:1;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" style="width:100%;">Xóa</button>
+            </form>
+            <a href="#" class="btn btn-secondary" onclick="hideDeleteConfirm(event)">Hủy</a>
+        </div>
+    </div>
+</div>
 <main>
     {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-                <li class="{{ message.tags }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
+    <div class="confirm-modal-overlay" id="messageModalOverlay" onclick="hideMessageModal(event)">
+        <div class="confirm-modal-card" onclick="event.stopPropagation();">
+            <h2>Thông báo</h2>
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn" style="width:100%;" onclick="hideMessageModal(event)">Đóng</button>
+            </div>
+        </div>
+    </div>
     {% endif %}
     {% block content %}{% endblock %}
 </main>
@@ -450,6 +470,33 @@
             event.preventDefault();
         }
         var overlay = document.getElementById('logoutConfirmOverlay');
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    function hideMessageModal(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        var overlay = document.getElementById('messageModalOverlay');
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    function showDeleteConfirm(event, formAction, title) {
+        event.preventDefault();
+        document.getElementById('deleteConfirmTitle').textContent = title || 'Xác nhận xóa?';
+        document.getElementById('deleteConfirmForm').action = formAction;
+        document.getElementById('deleteConfirmOverlay').hidden = false;
+    }
+
+    function hideDeleteConfirm(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        var overlay = document.getElementById('deleteConfirmOverlay');
         if (overlay) {
             overlay.hidden = true;
         }

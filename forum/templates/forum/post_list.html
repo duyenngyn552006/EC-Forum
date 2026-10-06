@@ -21,7 +21,7 @@
         {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
         <div>
             <label>Thẻ</label>
-            <select name="tag">
+            <select name="tag" onchange="this.form.submit()">
                 <option value="">Tất cả</option>
                 {% for t in tags %}
                     <option value="{{ t.slug }}" {% if t.slug == current_tag %}selected{% endif %}>#{{ t.name }}</option>
@@ -30,15 +30,17 @@
         </div>
         <div>
             <label>Sắp xếp</label>
-            <select name="sort">
+            <select name="sort" onchange="this.form.submit()">
                 <option value="new" {% if current_sort == "new" %}selected{% endif %}>Mới nhất</option>
                 <option value="activity" {% if current_sort == "activity" %}selected{% endif %}>Hoạt động gần nhất</option>
             </select>
         </div>
+        <noscript>
         <div>
             <label>&nbsp;</label>
             <button class="btn" type="submit">Lọc</button>
         </div>
+        </noscript>
     </form>
 </div>
 

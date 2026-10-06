@@ -10,8 +10,21 @@ from config.mixins import ContentStatus
 from interactions.utils import annotate_interaction_counts
 
 from . import services
-from .forms import AddMemberForm, GroupCreateForm, GroupDisableForm, GroupEditForm, GroupPostForm, GroupRejectForm, MemberRoleForm
-from .models import Group, GroupMembership, GroupPost
+from .forms import (
+    BulkInviteMemberForm,
+    GroupCreateForm,
+    GroupDisableForm,
+    GroupEditForm,
+    GroupJoinRequestForm,
+    GroupPostForm,
+    GroupPostRejectForm,
+    GroupRejectForm,
+    InviteMemberForm,
+    JoinRequestRejectForm,
+    MemberRoleForm,
+    TransferLeadershipForm,
+)
+from .models import Group, GroupJoinRequest, GroupMembership, GroupPost
 
 
 class GroupListView(ListView):
@@ -51,7 +64,20 @@ class GroupDetailView(DetailView):
             "role", "user__last_name", "user__first_name",
         )
         ctx["is_staff_user"] = user.is_authenticated and user.role == User.Role.STAFF
-        ctx["add_member_form"] = AddMemberForm()
+        ctx["invite_member_form"] = InviteMemberForm()
+        ctx["bulk_invite_form"] = BulkInviteMemberForm()
+        if ctx["is_manager"]:
+            ctx["pending_join_requests"] = self.object.join_requests.filter(
+                status=GroupJoinRequest.Status.PENDING
+            ).select_related("user")
+            pending_posts = self.object.posts.filter(status=ContentStatus.PENDING_REVIEW).select_related("author")
+            for post in pending_posts:
+                post.sensitive_keyword_note = services.get_sensitive_keyword_note(post)
+            ctx["pending_posts"] = pending_posts
+        ctx["has_pending_join_request"] = (
+            user.is_authenticated and not ctx["is_member"]
+            and self.object.join_requests.filter(user=user, status=GroupJoinRequest.Status.PENDING).exists()
+        )
         return ctx
 
 
@@ -139,9 +165,9 @@ def group_post_create(request, slug):
             )
             notify_mentions(request.user, extract_mentioned_user_ids(post.body), post)
             if keyword:
-                messages.warning(request, "Bài viết chứa từ khóa nhạy cảm nên đã chuyển sang trạng thái chờ kiểm duyệt.")
+                messages.warning(request, "Bài viết chứa từ khóa nhạy cảm, đang chờ trưởng/phó nhóm duyệt.")
             else:
-                messages.success(request, "Đã đăng bài trong nhóm.")
+                messages.success(request, "Đã gửi bài viết, đang chờ trưởng/phó nhóm duyệt.")
             return redirect(post.get_absolute_url())
     else:
         form = GroupPostForm()
@@ -150,7 +176,9 @@ def group_post_create(request, slug):
 
 
 def _can_manage_group_post(user, post):
-    return user.is_authenticated and (user == post.author or user.role == User.Role.STAFF)
+    return user.is_authenticated and (
+        user == post.author or user.role == User.Role.STAFF or _is_group_manager(user, post.group)
+    )
 
 
 @login_required
@@ -173,9 +201,9 @@ def group_post_edit(request, slug, pk):
             )
             notify_mentions(request.user, extract_mentioned_user_ids(post.body), post)
             if keyword:
-                messages.warning(request, "Bài viết chứa từ khóa nhạy cảm nên đã chuyển sang trạng thái chờ kiểm duyệt.")
+                messages.warning(request, "Bài viết chứa từ khóa nhạy cảm, đang chờ trưởng/phó nhóm duyệt lại.")
             else:
-                messages.success(request, "Đã cập nhật bài viết.")
+                messages.success(request, "Đã cập nhật bài viết, đang chờ trưởng/phó nhóm duyệt lại.")
             return redirect(post.get_absolute_url())
     else:
         form = GroupPostForm(instance=post)
@@ -195,6 +223,44 @@ def group_post_delete(request, slug, pk):
         messages.success(request, "Đã xóa bài viết.")
         return redirect(group.get_absolute_url())
     return render(request, "groups/group_post_confirm_delete.html", {"post": post, "group": group})
+
+
+@login_required
+def group_post_approve(request, slug, pk):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    post = get_object_or_404(GroupPost, pk=pk, group=group, status=ContentStatus.PENDING_REVIEW)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền duyệt bài viết trong nhóm.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        services.approve_group_post(post, request.user)
+        messages.success(request, "Đã duyệt và đăng bài viết.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_post_reject(request, slug, pk):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    post = get_object_or_404(GroupPost, pk=pk, group=group, status=ContentStatus.PENDING_REVIEW)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền từ chối bài viết trong nhóm.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        form = GroupPostRejectForm(request.POST)
+        if form.is_valid():
+            try:
+                services.reject_group_post(post, request.user, form.cleaned_data["reason"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, "Đã từ chối bài viết.")
+                return redirect(group.get_absolute_url())
+    else:
+        form = GroupPostRejectForm()
+    return render(
+        request, "groups/group_post_reject_form.html",
+        {"form": form, "group": group, "post": post, "sensitive_keyword_note": services.get_sensitive_keyword_note(post)},
+    )
 
 
 def _is_group_manager(user, group):
@@ -254,18 +320,97 @@ def group_enable(request, slug):
 def group_member_add(request, slug):
     group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
     if not _is_group_manager(request.user, group):
-        messages.error(request, "Bạn không có quyền thêm thành viên.")
+        messages.error(request, "Bạn không có quyền mời thành viên.")
         return redirect(group.get_absolute_url())
     if request.method == "POST":
-        form = AddMemberForm(request.POST)
+        form = InviteMemberForm(request.POST)
         if form.is_valid():
             try:
-                services.add_member(group, form.cleaned_data["email"])
+                services.invite_member(group, form.cleaned_data["email"], request.user)
             except ValueError as exc:
                 messages.error(request, str(exc))
             else:
                 messages.success(request, "Đã thêm thành viên vào nhóm.")
     return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_member_bulk_invite(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền mời thành viên.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        form = BulkInviteMemberForm(request.POST, request.FILES)
+        if form.is_valid():
+            added, skipped = services.invite_members_bulk(group, form.cleaned_data["csv_file"], request.user)
+            if added:
+                messages.success(request, f"Đã thêm {len(added)} thành viên: {', '.join(added)}.")
+            if skipped:
+                detail = "; ".join(f"{email} ({reason})" for email, reason in skipped)
+                messages.warning(request, f"Bỏ qua {len(skipped)} dòng: {detail}")
+            if not added and not skipped:
+                messages.warning(request, "Tệp CSV không có dòng email nào hợp lệ.")
+        else:
+            for error in form.errors.get("csv_file", []):
+                messages.error(request, error)
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_join_request_create(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if request.method == "POST":
+        form = GroupJoinRequestForm(request.POST)
+        if form.is_valid():
+            try:
+                services.request_to_join_group(group, request.user, form.cleaned_data["message"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, "Đã gửi yêu cầu tham gia nhóm, chờ trưởng/phó nhóm xét duyệt.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_join_request_approve(request, slug, request_id):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền duyệt yêu cầu tham gia nhóm.")
+        return redirect(group.get_absolute_url())
+    join_request = get_object_or_404(GroupJoinRequest, pk=request_id, group=group)
+    if request.method == "POST":
+        try:
+            services.approve_join_request(join_request, request.user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f"Đã chấp nhận {join_request.user} vào nhóm.")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_join_request_reject(request, slug, request_id):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    if not _is_group_manager(request.user, group):
+        messages.error(request, "Bạn không có quyền từ chối yêu cầu tham gia nhóm.")
+        return redirect(group.get_absolute_url())
+    join_request = get_object_or_404(GroupJoinRequest, pk=request_id, group=group)
+    if request.method == "POST":
+        form = JoinRequestRejectForm(request.POST)
+        if form.is_valid():
+            try:
+                services.reject_join_request(join_request, request.user, form.cleaned_data["reason"])
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, f"Đã từ chối yêu cầu tham gia nhóm của {join_request.user}.")
+                return redirect(group.get_absolute_url())
+    else:
+        form = JoinRequestRejectForm()
+    return render(
+        request, "groups/join_request_reject_form.html", {"form": form, "group": group, "join_request": join_request},
+    )
 
 
 @login_required
@@ -315,6 +460,26 @@ def group_leave(request, slug):
         else:
             messages.success(request, "Bạn đã rời nhóm.")
             return redirect("groups:list")
+    return redirect(group.get_absolute_url())
+
+
+@login_required
+def group_transfer_leadership(request, slug):
+    group = get_object_or_404(Group, slug=slug, status=Group.Status.ACTIVE)
+    is_leader = group.memberships.filter(user=request.user, role=GroupMembership.Role.LEADER).exists()
+    if not is_leader:
+        messages.error(request, "Chỉ trưởng nhóm mới có quyền chuyển quyền trưởng nhóm.")
+        return redirect(group.get_absolute_url())
+    if request.method == "POST":
+        form = TransferLeadershipForm(request.POST)
+        if form.is_valid():
+            target = get_object_or_404(User, pk=form.cleaned_data["new_leader_id"])
+            try:
+                services.transfer_leadership(group, target)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, f"Đã chuyển quyền trưởng nhóm cho {target}.")
     return redirect(group.get_absolute_url())
 
 

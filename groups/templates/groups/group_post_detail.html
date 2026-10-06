@@ -14,7 +14,7 @@
             <div class="post-menu-dropdown" id="postMenuDropdown" hidden>
                 {% if user == post.author or user.role == "staff" %}
                     <a href="{% url 'groups:post_edit' post.group.slug post.pk %}">✏️ Sửa</a>
-                    <a class="danger-text" href="{% url 'groups:post_delete' post.group.slug post.pk %}">🗑️ Xóa</a>
+                    <a class="danger-text" href="#" onclick="showDeleteConfirm(event, '{% url 'groups:post_delete' post.group.slug post.pk %}', 'Xác nhận xóa bài viết &quot;{{ post.title|escapejs }}&quot;?')">🗑️ Xóa</a>
                 {% endif %}
                 <form method="post" action="{% url 'interactions:toggle_save' 'grouppost' post.pk %}">{% csrf_token %}<button type="submit">{% if user_has_saved %}🔖 Đã lưu{% else %}🔖 Lưu{% endif %}</button></form>
                 <a class="danger-text" href="{% url 'moderation:create_report' 'grouppost' post.pk %}">🚩 Báo cáo vi phạm</a>

@@ -5,6 +5,7 @@
     <h1>Nội dung chờ kiểm duyệt (do trúng từ khóa nhạy cảm)</h1>
     <p>Duyệt sẽ đăng công khai nội dung và báo cho người tạo biết. Từ chối sẽ ẩn vĩnh viễn nội dung
         (chuyển trạng thái "Đã xóa") và bắt buộc nhập lý do để báo lại cho người tạo.</p>
+    <p><em>Bài đăng trong nhóm không nằm trong danh sách này — do trưởng/phó nhóm tự duyệt ngay trong trang nhóm.</em></p>
 </div>
 
 <div class="card">
@@ -31,17 +32,6 @@
     {% empty %}<p>Không có.</p>{% endfor %}
 </div>
 
-<div class="card">
-    <h3>Bài đăng trong nhóm</h3>
-    {% for gp in group_posts %}
-        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin-bottom:12px;">
-            <p><strong>{{ gp.title }}</strong> — {{ gp.author }} · nhóm {{ gp.group.name }} · {{ gp.created_at|date:"d/m/Y H:i" }}</p>
-            <div style="background:#f9fafb; border-radius:6px; padding:10px; margin-bottom:10px;">{{ gp.body|safe }}</div>
-            <form method="post" action="{% url 'moderation:approve_content' 'grouppost' gp.pk %}" style="display:inline;">{% csrf_token %}<button class="btn btn-success" type="submit">Duyệt</button></form>
-            <a class="btn btn-danger" href="{% url 'moderation:reject_content' 'grouppost' gp.pk %}">Từ chối</a>
-        </div>
-    {% empty %}<p>Không có.</p>{% endfor %}
-</div>
 
 <div class="card">
     <h3>Bình luận</h3>

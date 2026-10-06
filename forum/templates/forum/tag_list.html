@@ -19,7 +19,7 @@
                     <td>{{ t.slug }}</td>
                     <td>
                         <a href="{% url 'forum:tag_edit' t.pk %}">Sửa</a>
-                        · <a class="danger-text" href="{% url 'forum:tag_delete' t.pk %}">Xóa</a>
+                        · <a class="danger-text" href="#" onclick="showDeleteConfirm(event, '{% url 'forum:tag_delete' t.pk %}', 'Xác nhận xóa thẻ &quot;{{ t.name|escapejs }}&quot;?')">Xóa</a>
                     </td>
                 </tr>
             {% empty %}

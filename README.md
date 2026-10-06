@@ -136,27 +136,6 @@ EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 Email sẽ in thẳng ra terminal đang chạy `runserver` (kể cả link xác thực) thay vì gửi qua Mailtrap —
 tiện lúc demo offline không có mạng, nhưng không có giao diện hộp thư để xem như Mailtrap.
 
-## Giao diện 100% tiếng Việt (kể cả luồng của allauth)
-
-`django-allauth` và `django-simple-captcha` không có sẵn bản dịch tiếng Việt, nên toàn bộ trang
-đăng ký/đăng nhập/quên mật khẩu/xác thực email đã được:
-
-1. Ghi đè bằng template tiếng Việt riêng trong [`templates/account/`](templates/account/) (nội dung
-   trang, tiêu đề, nút bấm) và [`templates/account/email/`](templates/account/email/) (nội dung email
-   gửi đi thật, ví dụ email xác thực/khôi phục mật khẩu).
-2. Bổ sung bản dịch cho các chuỗi còn lại (nhãn field, thông báo lỗi, menu...) tại
-   [`locale/vi/LC_MESSAGES/django.po`](locale/vi/LC_MESSAGES/django.po).
-
-Máy dev **không có sẵn GNU gettext** (`msgfmt`) nên không dùng được `python manage.py compilemessages`.
-Nếu sửa file `.po`, biên dịch lại bằng `polib` (cài 1 lần: `pip install polib`):
-
-```powershell
-python -c "import polib; po = polib.pofile('locale/vi/LC_MESSAGES/django.po'); po.save_as_mofile('locale/vi/LC_MESSAGES/django.mo')"
-```
-
-Rồi khởi động lại `runserver` (StatReloader tự nhận thay đổi `.mo` và restart, nhưng nếu không thấy
-đổi thì tắt bật lại thủ công).
-
 ## Trình soạn thảo rich text (CKEditor 5)
 
 Nội dung dài (`ForumPost.body`, `Announcement.body`, `GroupPost.body`) dùng `django-ckeditor-5` thay vì
@@ -173,8 +152,7 @@ kể cả khi có người cố gửi thẳng HTML độc hại qua request (b�
 tạo nhóm, lịch sử chỉnh sửa, nhật ký kiểm duyệt + kháng nghị), views (CBV cho CRUD chuẩn, FBV cho luồng
 nghiệp vụ đặc biệt), rate limiting cho đăng bài/bình luận, hash mật khẩu Argon2, giới hạn domain email
 khi đăng ký (tách riêng Họ/Tên/Lớp), avatar + ảnh bìa ở trang hồ sơ, template tối giản đủ chạy, dữ liệu
-demo qua migration, tìm kiếm & lọc toàn hệ thống (app `search`, xem mục bên dưới), wireframe 8 màn hình
-chính tại [`docs/wireframes/`](docs/wireframes/).
+demo qua migration, tìm kiếm & lọc toàn hệ thống (app `search`, xem mục bên dưới).
 
 Chưa làm: backup định kỳ qua Celery beat (task chưa viết).
 

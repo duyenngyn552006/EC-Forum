@@ -161,13 +161,14 @@ def report_resolve(request, pk):
 def pending_content_list(request):
     from announcements.models import Announcement
     from forum.models import ForumPost
-    from groups.models import GroupPost
     from interactions.models import Comment
 
+    # GroupPost KHONG nam trong hang doi nay - bai viet trong nhom la pham vi noi bo,
+    # do truong nhom/pho nhom tu duyet (xem groups:post_approve/post_reject), khong
+    # lien quan Giao vu Khoa.
     context = {
         "announcements": Announcement.objects.filter(status=ContentStatus.PENDING_REVIEW),
         "forum_posts": ForumPost.objects.filter(status=ContentStatus.PENDING_REVIEW),
-        "group_posts": GroupPost.objects.filter(status=ContentStatus.PENDING_REVIEW),
         "comments": Comment.objects.filter(status=Comment.Status.PENDING_REVIEW),
     }
     return render(request, "moderation/pending_content_list.html", context)
@@ -175,6 +176,9 @@ def pending_content_list(request):
 
 @user_passes_test(_is_staff, login_url="home")
 def approve_content(request, model_key, object_id):
+    if model_key == "grouppost":
+        messages.error(request, "Bài viết trong nhóm do trưởng/phó nhóm duyệt, không thuộc phạm vi Giáo vụ Khoa.")
+        return redirect("moderation:pending_content_list")
     content_type, obj = resolve_target(model_key, object_id)
     obj.status = "published"
     obj.save(update_fields=["status"])
@@ -186,6 +190,9 @@ def approve_content(request, model_key, object_id):
 
 @user_passes_test(_is_staff, login_url="home")
 def reject_content(request, model_key, object_id):
+    if model_key == "grouppost":
+        messages.error(request, "Bài viết trong nhóm do trưởng/phó nhóm duyệt, không thuộc phạm vi Giáo vụ Khoa.")
+        return redirect("moderation:pending_content_list")
     content_type, obj = resolve_target(model_key, object_id)
     if request.method == "POST":
         form = ContentRejectForm(request.POST)

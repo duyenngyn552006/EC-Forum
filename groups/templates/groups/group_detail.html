@@ -18,6 +18,15 @@
     <p>Tạo bởi {{ group.created_by }} · {{ group.created_at|date:"d/m/Y" }}</p>
     {% if is_member %}
         <a class="btn" href="{% url 'groups:post_create' group.slug %}">+ Đăng bài trong nhóm</a>
+    {% elif user.is_authenticated and group.status == "active" %}
+        {% if has_pending_join_request %}
+            <span class="badge">Yêu cầu tham gia đang chờ duyệt</span>
+        {% else %}
+            <form method="post" action="{% url 'groups:join_request_create' group.slug %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn" type="submit">Xin tham gia nhóm</button>
+            </form>
+        {% endif %}
     {% endif %}
     {% if my_role == "leader" or is_staff_user %}
         <a class="btn btn-secondary" href="{% url 'groups:edit' group.slug %}">Sửa thông tin nhóm</a>
@@ -32,7 +41,7 @@
             </form>
         {% endif %}
     {% endif %}
-    {% if is_member and my_role != "leader" %}
+    {% if is_member %}
         <form method="post" action="{% url 'groups:leave' group.slug %}" style="display:inline;">
             {% csrf_token %}
             <button class="btn btn-secondary" type="submit">Rời nhóm</button>
@@ -43,6 +52,9 @@
 <div class="tab-bar">
     <button type="button" class="active" onclick="switchGroupTab(this, 'tab-discussion')">Bài viết trong nhóm</button>
     <button type="button" onclick="switchGroupTab(this, 'tab-members')">Thành viên ({{ group.memberships.count }})</button>
+    {% if is_manager %}
+        <button type="button" onclick="switchGroupTab(this, 'tab-moderation')">Duyệt nội dung ({{ pending_posts|length }})</button>
+    {% endif %}
 </div>
 
 <div id="tab-discussion" class="tab-panel">
@@ -77,16 +89,91 @@
     {% endfor %}
 </div>
 
+{% if is_manager %}
+<div id="tab-moderation" class="tab-panel" hidden>
+    {% for pp in pending_posts %}
+    <div class="card">
+        <p><strong>{{ pp.title }}</strong> — {{ pp.author }} · {{ pp.created_at|date:"d/m/Y H:i" }}</p>
+        {% if pp.sensitive_keyword_note %}
+            <p><span style="background:#fde8e8;color:#7f1d1d;font-weight:bold;padding:3px 10px;border-radius:999px;font-size:12.5px;">⚠️ Có chứa từ khóa nhạy cảm: '{{ pp.sensitive_keyword_note }}'</span></p>
+        {% else %}
+            <p><span style="background:#e3f7e9;color:#14532d;font-weight:bold;padding:3px 10px;border-radius:999px;font-size:12.5px;">Đang chờ xét duyệt</span></p>
+        {% endif %}
+        <div style="background:#f9fafb; border-radius:6px; padding:10px; margin-bottom:10px;">{{ pp.body|safe }}</div>
+        <form method="post" action="{% url 'groups:post_approve' group.slug pp.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Duyệt</button>
+        </form>
+        <a class="btn btn-danger" href="{% url 'groups:post_reject' group.slug pp.pk %}">Từ chối</a>
+    </div>
+    {% empty %}
+    <div class="card">
+        <p>Không có bài viết nào chờ duyệt.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div id="tab-members" class="tab-panel" hidden>
     {% if is_manager %}
     <div class="card">
-        <h3>Thêm thành viên</h3>
+        <h3>Mời thành viên</h3>
         <form method="post" action="{% url 'groups:member_add' group.slug %}" class="search-bar" style="max-width:420px;">
             {% csrf_token %}
-            <input type="email" name="email" placeholder="Email thành viên (@due.udn.vn)" required>
-            <button type="submit">Thêm</button>
+            <input type="email" name="email" placeholder="Email người muốn mời (@due.udn.vn)" required>
+            <button type="submit">Mời</button>
+        </form>
+        <h4 style="margin-top:16px;">Mời hàng loạt bằng tệp CSV</h4>
+        <p style="font-size:13px;color:#6b7280;">Tệp .csv, mỗi dòng 1 email ở cột đầu tiên (dòng đầu có thể là dòng tiêu đề "email").</p>
+        <form method="post" action="{% url 'groups:member_bulk_invite' group.slug %}" enctype="multipart/form-data" class="search-bar" style="max-width:420px;">
+            {% csrf_token %}
+            <input type="file" name="csv_file" accept=".csv" required>
+            <button type="submit">Tải lên</button>
         </form>
     </div>
+    {% if my_role == "leader" %}
+    <div class="card">
+        <h3>Chuyển quyền trưởng nhóm</h3>
+        <p style="font-size:13px;color:#6b7280;">Trưởng nhóm cũ sẽ xuống làm phó nhóm (điều hành).</p>
+        <form method="post" action="{% url 'groups:transfer_leadership' group.slug %}" class="search-bar" style="max-width:420px;">
+            {% csrf_token %}
+            <select name="new_leader_id" required>
+                <option value="">— Chọn thành viên —</option>
+                {% for m in memberships %}
+                    {% if m.role != "leader" %}
+                        <option value="{{ m.user.pk }}">{{ m.user }} ({{ m.get_role_display }})</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <button type="submit">Chuyển</button>
+        </form>
+    </div>
+    {% endif %}
+    {% if pending_join_requests %}
+    <div class="card">
+        <h3>Yêu cầu xin tham gia nhóm ({{ pending_join_requests|length }})</h3>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Người xin tham gia</th><th>Lời nhắn</th><th>Hành động</th></tr></thead>
+                <tbody>
+                {% for jr in pending_join_requests %}
+                    <tr>
+                        <td>{{ jr.user }}</td>
+                        <td>{{ jr.message|default:"—"|truncatewords:15 }}</td>
+                        <td>
+                            <form method="post" action="{% url 'groups:join_request_approve' group.slug jr.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" style="padding:4px 10px;font-size:12px;">Chấp nhận</button>
+                            </form>
+                            <a class="btn btn-danger" style="padding:4px 10px;font-size:12px;" href="{% url 'groups:join_request_reject' group.slug jr.pk %}">Từ chối</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
     <div class="table-responsive">
         <table>

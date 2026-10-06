@@ -24,7 +24,7 @@
                     <td>{{ kw.created_at|date:"d/m/Y H:i" }}</td>
                     <td>
                         <a href="{% url 'moderation:keyword_edit' kw.pk %}">Sửa</a>
-                        · <a class="danger-text" href="{% url 'moderation:keyword_delete' kw.pk %}">Xóa</a>
+                        · <a class="danger-text" href="#" onclick="showDeleteConfirm(event, '{% url 'moderation:keyword_delete' kw.pk %}', 'Xác nhận xóa từ khóa &quot;{{ kw.keyword|escapejs }}&quot;?')">Xóa</a>
                     </td>
                 </tr>
             {% empty %}

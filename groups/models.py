@@ -73,6 +73,71 @@ class GroupMembership(models.Model):
         return f"{self.user} @ {self.group} ({self.role})"
 
 
+class GroupJoinRequest(models.Model):
+    """User tu xin vao 1 nhom - cho leader/moderator duyet (nguoc chieu voi GroupInvitation:
+    o day nguoi dung la ben chu dong xin, nhom la ben xet duyet)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Chờ duyệt"
+        ACCEPTED = "accepted", "Đã chấp nhận"
+        REJECTED = "rejected", "Đã từ chối"
+
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="join_requests")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_join_requests")
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="group_join_requests_reviewed"
+    )
+    reject_reason = models.CharField(max_length=255, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "user"], condition=models.Q(status="pending"), name="unique_pending_join_request",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} xin vào {self.group} ({self.status})"
+
+
+class GroupInvitation(models.Model):
+    """Leader/moderator moi 1 user vao nhom - nguoc chieu voi GroupJoinRequest: nhom la ben
+    chu dong moi, nguoi duoc moi phai dong y (accept) thi moi tao GroupMembership."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Chờ phản hồi"
+        ACCEPTED = "accepted", "Đã chấp nhận"
+        DECLINED = "declined", "Đã từ chối"
+
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="invitations")
+    invited_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_invitations")
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="group_invitations_sent"
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "invited_user"], condition=models.Q(status="pending"), name="unique_pending_invitation",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.group} mời {self.invited_user} ({self.status})"
+
+
 class GroupPost(ModeratedContentMixin, models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="posts")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_posts")

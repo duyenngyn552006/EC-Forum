@@ -15,7 +15,7 @@
             <div class="post-menu-dropdown" id="postMenuDropdown" hidden>
                 {% if user == post.author or user.role == "staff" %}
                     <a href="{% url 'forum:post_edit' post.pk %}">✏️ Sửa</a>
-                    <a class="danger-text" href="{% url 'forum:post_delete' post.pk %}">🗑️ Xóa</a>
+                    <a class="danger-text" href="#" onclick="showDeleteConfirm(event, '{% url 'forum:post_delete' post.pk %}', 'Xác nhận xóa bài viết &quot;{{ post.title|escapejs }}&quot;?')">🗑️ Xóa</a>
                 {% endif %}
                 {% if user.role in "lecturer,bch,staff" %}
                     {% if post.is_pinned %}
