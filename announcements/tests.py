@@ -73,3 +73,42 @@ class EventDatetimeTests(TestCase):
 
             with self.assertRaises(PinLimitExceeded):
                 services.pin_announcement(a2, staff)
+
+
+class AnnouncementPostPermissionTests(TestCase):
+    """Giao vu Khoa, BCH Khoa, Giang vien/BCN Khoa dang thong bao duoc, dang ngay khong
+    qua duyet noi bo nao (CLAUDE.md); Sinh vien khong dang duoc."""
+
+    def setUp(self):
+        self.lecturer = User.objects.create_user(email="post_lecturer@due.udn.vn", password="Pass1234!", role=User.Role.LECTURER)
+        self.student = User.objects.create_user(email="post_student@due.udn.vn", password="Pass1234!", role=User.Role.STUDENT)
+
+    def _payload(self):
+        return {
+            "kind": Announcement.Kind.OFFICIAL,
+            "title": "Thong bao tu giang vien",
+            "body": "noi dung thong bao",
+            "attachments-TOTAL_FORMS": "0",
+            "attachments-INITIAL_FORMS": "0",
+            "attachments-MIN_NUM_FORMS": "0",
+            "attachments-MAX_NUM_FORMS": "10",
+        }
+
+    def test_lecturer_can_post_announcement_immediately(self):
+        self.client.force_login(self.lecturer)
+        response = self.client.post(reverse("announcements:create"), self._payload())
+        self.assertEqual(response.status_code, 302)
+        announcement = Announcement.objects.get(title="Thong bao tu giang vien")
+        self.assertEqual(announcement.status, "published")
+
+    def test_lecturer_sees_create_button_on_list_page(self):
+        self.client.force_login(self.lecturer)
+        response = self.client.get(reverse("announcements:list"))
+        self.assertContains(response, reverse("announcements:create"))
+
+    def test_student_cannot_post_announcement(self):
+        self.client.force_login(self.student)
+        response = self.client.post(reverse("announcements:create"), self._payload(), follow=True)
+        self.assertFalse(Announcement.objects.filter(title="Thong bao tu giang vien").exists())
+        messages = list(response.context["messages"])
+        self.assertTrue(any("Chỉ Giáo vụ Khoa" in str(m) for m in messages))

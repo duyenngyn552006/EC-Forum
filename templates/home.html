@@ -1,20 +1,127 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Trang chủ - EC Forum{% endblock %}
 {% block content %}
-<div class="card">
-    <h1>Diễn đàn Khoa Thương mại điện tử - Marketing và Công nghệ số</h1>
-    <p>Kênh thông báo chính thức và không gian thảo luận nội bộ cho sinh viên, giảng viên, BCH Khoa và Giáo vụ Khoa.</p>
-    {% if not user.is_authenticated %}
-        <a class="btn" href="{% url 'account_signup' %}">Đăng ký ngay</a>
-        <a class="btn btn-secondary" href="{% url 'account_login' %}">Đăng nhập</a>
-    {% endif %}
+<div class="home-banner">
+    <img src="{% static 'img/banner.png' %}" alt="Diễn đàn Khoa Thương mại điện tử - Marketing và Công nghệ số">
 </div>
-<div class="card">
-    <h2>Điều hướng nhanh</h2>
-    <ul>
-        <li><a href="{% url 'announcements:list' %}">Thông tin / thông báo chính thức &amp; sự kiện</a></li>
-        <li><a href="{% url 'forum:post_list' %}">Diễn đàn thảo luận</a></li>
-        <li><a href="{% url 'groups:list' %}">Danh sách nhóm</a></li>
-    </ul>
+
+<div class="home-split-73">
+    <div class="card">
+        <h2>Thông báo của Khoa</h2>
+        {% for a in announcements %}
+        <div class="list-card{% if a.is_pinned %} pinned{% endif %}">
+            {% if a.featured_image %}
+                <img src="{{ a.featured_image.url }}" alt="" class="list-thumb">
+            {% else %}
+                <div class="list-avatar">{{ a.author.get_full_name|default:a.author.email|first|upper }}</div>
+            {% endif %}
+            <div class="list-body">
+                <div class="list-meta">
+                    {% if a.is_pinned %}<span class="badge">📌 Đã ghim</span>{% endif %}
+                    <span class="badge">{{ a.get_kind_display }}</span>
+                    <span>{{ a.author }}</span>
+                    <span>· {{ a.created_at|date:"d/m/Y H:i" }}</span>
+                    <span>· 👁️ {{ a.view_count }}</span>
+                    <span>· 💬 {{ a.comment_count }}</span>
+                </div>
+                <h3 class="list-title"><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></h3>
+                <p class="list-excerpt">{{ a.body|striptags|truncatewords:28 }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <p>Chưa có thông báo nào.</p>
+        {% endfor %}
+        <a href="{% url 'announcements:list' %}">Xem tất cả thông báo →</a>
+    </div>
+
+    <div class="card">
+        <h2>👁️ Lượt xem cao</h2>
+        {% for p in trending_posts %}
+        <a href="{{ p.get_absolute_url }}" class="feed-list-row">
+            {% if p.featured_image %}
+                <img src="{{ p.featured_image.url }}" alt="" class="feed-list-thumb">
+            {% else %}
+                <div class="feed-list-thumb-placeholder">{{ p.category.name }}</div>
+            {% endif %}
+            <span class="feed-list-title">{{ p.title }}<br><span style="font-weight:400;color:#6b7280;">👁️ {{ p.view_count }} lượt xem</span></span>
+        </a>
+        {% empty %}
+        <p>Chưa có bài viết nào.</p>
+        {% endfor %}
+        <a href="{% url 'forum:post_list' %}" style="margin-top:12px;display:block;">Xem thêm bài viết →</a>
+    </div>
 </div>
+
+{% if top_discussed_posts %}
+<div class="card">
+    <h2>🔥 Độ thảo luận sôi nổi</h2>
+    {% for p in top_discussed_posts %}
+    <div class="list-card">
+        <div class="list-avatar">{{ p.author.get_full_name|default:p.author.email|first|upper }}</div>
+        <div class="list-body">
+            <div class="list-meta">
+                <span class="badge">{{ p.category.name }}</span>
+                <span>{{ p.author }}</span>
+                <span>· 💬 {{ p.comment_count }} bình luận</span>
+            </div>
+            <h3 class="list-title"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></h3>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if group_leaderboard or leaderboard %}
+<div class="home-split-50">
+    <div class="card">
+        <h2>👥 BXH nhóm sôi nổi tháng này</h2>
+        {% for g in group_leaderboard %}
+        <div class="list-card" style="align-items:center;">
+            <div style="flex-shrink:0;width:28px;text-align:center;font-weight:bold;color:#10233f;">
+                {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}
+            </div>
+            {% if g.logo %}
+                <img src="{{ g.logo.url }}" alt="" class="list-avatar">
+            {% else %}
+                <div class="list-avatar">{{ g.name|first|upper }}</div>
+            {% endif %}
+            <div class="list-body">
+                <h3 class="list-title"><a href="{{ g.get_absolute_url }}">{{ g.name }}</a></h3>
+                <div class="list-meta">
+                    <span>📝 {{ g.post_count }} bài đăng</span>
+                    <span>· 👥 {{ g.member_count }} thành viên</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>Chưa có nhóm nào hoạt động trong tháng.</p>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <h2>🏆 BXH cá nhân tháng này</h2>
+        {% for u in leaderboard %}
+        <div class="list-card" style="align-items:center;">
+            <div style="flex-shrink:0;width:28px;text-align:center;font-weight:bold;color:#10233f;">
+                {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}
+            </div>
+            <div class="list-avatar">
+                {% if u.avatar %}<img src="{{ u.avatar.url }}" alt="">{% else %}{{ u.get_full_name|default:u.email|first|upper }}{% endif %}
+            </div>
+            <div class="list-body">
+                <h3 class="list-title">{{ u.get_full_name|default:u.email }} <span class="pill">{{ u.get_role_display }}</span></h3>
+                <div class="list-meta">
+                    <span>📝 {{ u.post_count }} bài viết</span>
+                    <span>· 💬 {{ u.comment_count }} bình luận</span>
+                    <span>· <strong>{{ u.total_score }} điểm</strong></span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>Chưa có thành viên nào tương tác trong tháng.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}

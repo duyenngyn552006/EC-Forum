@@ -4,10 +4,6 @@
 <div class="card">
     <h1>Diễn đàn thảo luận</h1>
     {% if user.is_authenticated %}<a class="btn" href="{% url 'forum:post_create' %}">+ Đăng bài mới</a>{% endif %}
-    <form method="get" class="search-bar" style="margin-top:12px;">
-        <input type="text" name="q" placeholder="Tìm kiếm bài viết..." value="{{ request.GET.q }}">
-        <button type="submit">Tìm</button>
-    </form>
 </div>
 
 <div class="card">
@@ -18,7 +14,6 @@
         {% endfor %}
     </div>
     <form method="get" class="filter-grid" style="margin-top:12px;">
-        {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
         <div>
             <label>Thẻ</label>
             <select name="tag" onchange="this.form.submit()">

@@ -2,7 +2,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView, TemplateView
+from django.views.generic import RedirectView
+
+from . import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -14,7 +16,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("captcha/", include("captcha.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
-    path("", TemplateView.as_view(template_name="home.html"), name="home"),
+    path("", views.home_view, name="home"),
     path("profile/", include(("accounts.urls", "accounts"), namespace="accounts")),
     path("announcements/", include(("announcements.urls", "announcements"), namespace="announcements")),
     path("forum/", include(("forum.urls", "forum"), namespace="forum")),

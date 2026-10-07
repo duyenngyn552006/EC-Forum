@@ -14,7 +14,7 @@ from .models import Announcement
 
 
 def _can_post_announcement(user):
-    return user.is_authenticated and user.role in (User.Role.STAFF, User.Role.BCH)
+    return user.is_authenticated and user.role in (User.Role.STAFF, User.Role.BCH, User.Role.LECTURER)
 
 
 class AnnouncementListView(ListView):
@@ -75,7 +75,7 @@ class _StaffOrBchRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 @ratelimit(key="user", rate="10/m", block=True)
 def announcement_create(request):
     if not _can_post_announcement(request.user):
-        messages.error(request, "Chỉ Giáo vụ Khoa hoặc BCH Khoa mới được đăng thông tin/thông báo.")
+        messages.error(request, "Chỉ Giáo vụ Khoa, BCH Khoa hoặc Giảng viên/BCN Khoa mới được đăng thông tin/thông báo.")
         return redirect("announcements:list")
 
     if request.method == "POST":

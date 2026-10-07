@@ -35,7 +35,7 @@ Chỉ chấp nhận đăng ký/đăng nhập bằng email đúng domain chính t
 
 ## 4 actor (KHÔNG đơn giản hóa về 2 actor như model cũ)
 - **Sinh viên**: vai trò mặc định khi đăng ký. Tạo bài thảo luận, bình luận, tham gia nhóm; **tạo nhóm phải qua duyệt** của Giáo vụ Khoa (khác Giảng viên/BCH — tạo nhóm có hiệu lực ngay).
-- **Giảng viên / BCN Khoa**: phản hồi định hướng học thuật, duyệt nhóm thuộc phạm vi phụ trách. Có thể ghim bài trong phạm vi thông tin/thông báo chính thức. (Không xem được dashboard thống kê - chỉ Giáo vụ Khoa mới có quyền này, đã chốt với nhóm.)
+- **Giảng viên / BCN Khoa**: phản hồi định hướng học thuật, duyệt nhóm thuộc phạm vi phụ trách. Đăng được thông tin/thông báo chính thức (hiệu lực ngay, không qua duyệt nội bộ nào — giống BCH Khoa) và ghim bài trong phạm vi thông tin/thông báo chính thức. (Không xem được dashboard thống kê - chỉ Giáo vụ Khoa mới có quyền này, đã chốt với nhóm.)
 - **BCH Khoa**: đăng thông tin sự kiện/hoạt động phong trào **không qua duyệt của BCN Khoa** (thuộc phạm vi BCH tự quản lý), quản lý nhóm BCH/dự án/hoạt động, ghim bài thuộc phạm vi phụ trách.
 - **Giáo vụ Khoa (Quản trị viên hệ thống)**: đăng thông tin/thông báo chính thức (không qua duyệt nội bộ nào khác vì nội dung đã phê duyệt từ cấp trên trước khi đưa vào hệ thống), giám sát/kiểm duyệt toàn hệ thống, quản lý tài khoản (khóa/mở khóa), gán/thu hồi vai trò, duyệt yêu cầu tạo nhóm của sinh viên, xử lý báo cáo vi phạm và kháng nghị.
 

@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card">
     <h1>Thông tin / Thông báo</h1>
-    {% if user.is_authenticated and user.role in "bch,staff" %}
+    {% if user.is_authenticated and user.role in "bch,staff,lecturer" %}
         <a class="btn" href="{% url 'announcements:create' %}">+ Đăng thông báo mới</a>
     {% endif %}
     <div class="filter-pills" style="margin-top:12px;">

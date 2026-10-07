@@ -42,11 +42,6 @@ class PostListView(ListView):
         category_slug = self.kwargs.get("category_slug")
         if category_slug:
             qs = qs.filter(category__slug=category_slug)
-        query = self.request.GET.get("q")
-        if query:
-            from django.db.models import Q
-
-            qs = qs.filter(Q(title__icontains=query) | Q(body__icontains=query))
         tag_slug = self.request.GET.get("tag")
         if tag_slug:
             qs = qs.filter(tags__slug=tag_slug)
