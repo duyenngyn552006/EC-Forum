@@ -8,15 +8,15 @@
     <title>{% block title %}EC Forum{% endblock %}</title>
     <style>
         body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #1a1a1a; }
-        header { background: #10233f; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        header { background: #10233f; color: #fff; padding: 12px clamp(16px, 3vw, 40px); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         header a { color: #fff; text-decoration: none; margin-right: 14px; }
         header nav a { font-size: 14px; }
         .header-left { display: flex; align-items: center; flex-wrap: wrap; }
         .header-right { display: flex; align-items: center; flex-wrap: wrap; }
-        main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+        main { max-width: 1320px; margin: 24px auto; padding: 0 clamp(16px, 3vw, 40px); }
 
         .site-footer { background: #10233f; color: #d7deeb; margin-top: 24px; }
-        .site-footer-inner { max-width: 960px; margin: 0 auto; padding: 28px 16px; display: flex; flex-wrap: wrap; gap: 32px; justify-content: space-between; }
+        .site-footer-inner { max-width: 1320px; margin: 0 auto; padding: 28px clamp(16px, 3vw, 40px); display: flex; flex-wrap: wrap; gap: 32px; justify-content: space-between; }
         .site-footer-brand { flex: 1 1 280px; max-width: 420px; }
         .site-footer-brand strong { color: #fff; font-size: 17px; }
         .site-footer-brand p { font-size: 13px; line-height: 1.6; color: #b6c0d4; margin: 8px 0 0; }
@@ -48,7 +48,7 @@
         input[type=text], input[type=email], input[type=password], input[type=number],
         input[type=date], input[type=time], input[type=url], input[type=tel], input[type=search],
         textarea, select {
-            width: 100%; max-width: 480px; box-sizing: border-box; padding: 9px 12px;
+            width: 100%; max-width: 640px; box-sizing: border-box; padding: 9px 12px;
             border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit;
             background: #fff; color: #1a1a1a; transition: border-color 0.15s, box-shadow 0.15s;
         }
