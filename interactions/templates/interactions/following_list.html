@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Mục đang theo dõi{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Mục đang theo dõi</h1>
+    <p style="font-size:13px;color:#6b7280;">Bạn nhận thông báo khi có bài mới trong chuyên mục/thẻ, hoặc bình luận mới trong bài đang theo dõi. Có thể tắt loại thông báo này ở <a href="{% url 'notifications:preferences' %}">Cài đặt thông báo</a>.</p>
+</div>
+{% for row in rows %}
+<div class="list-card">
+    <div class="list-body">
+        <div class="list-meta">
+            <span class="badge">{% if row.kind == "category" %}Chuyên mục{% elif row.kind == "tag" %}Thẻ{% else %}Bài viết{% endif %}</span>
+        </div>
+        <h3 class="list-title"><a href="{{ row.url }}">{{ row.label }}</a></h3>
+    </div>
+    <form method="post" action="{% url 'interactions:toggle_follow' row.model_key row.object_id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'interactions:following' %}">
+        <button class="btn btn-secondary" type="submit">Bỏ theo dõi</button>
+    </form>
+</div>
+{% empty %}
+<div class="card">
+    <p>Bạn chưa theo dõi mục nào. Mở một <a href="{% url 'forum:post_list' %}">chuyên mục diễn đàn</a> hoặc một bài viết rồi bấm “Theo dõi”.</p>
+</div>
+{% endfor %}
+{% endblock %}

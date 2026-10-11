@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Duyệt yêu cầu tạo nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Yêu cầu tạo nhóm đang chờ duyệt</h1>
+    {% for g in groups %}
+    <div class="card">
+        <h3>{{ g.name }}</h3>
+        <p>{{ g.description }}</p>
+        <p>Đề xuất bởi {{ g.created_by }} · {{ g.created_at|date:"d/m/Y H:i" }}</p>
+        <form method="post" action="{% url 'groups:approve' g.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn" type="submit">Duyệt</button>
+        </form>
+        <a class="btn btn-danger" href="{% url 'groups:reject' g.pk %}">Từ chối</a>
+    </div>
+    {% empty %}
+    <p>Không có yêu cầu nào đang chờ.</p>
+    {% endfor %}
+</div>
+{% endblock %}

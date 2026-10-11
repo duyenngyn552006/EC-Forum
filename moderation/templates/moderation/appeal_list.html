@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Kháng nghị{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Kháng nghị đang chờ xử lý</h1>
+    {% for a in appeals %}
+    <div class="card">
+        <p>{{ a.user }} - {{ a.created_at|date:"d/m/Y H:i" }}</p>
+        <p>{{ a.reason }}</p>
+        <a class="btn" href="{% url 'moderation:appeal_review' a.pk %}">Xem xét</a>
+    </div>
+    {% empty %}
+    <p>Không có kháng nghị nào.</p>
+    {% endfor %}
+</div>
+{% endblock %}

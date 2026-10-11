@@ -1,0 +1,54 @@
+{# Khoi nhap tai lieu dinh kem (link Google Drive) trong form tao/sua bai - can document_formset trong context #}
+{% if document_formset %}
+<div class="doc-section">
+    <h3>📎 Tài liệu đính kèm <span class="doc-hint">(không bắt buộc, tối đa {{ document_formset.max_num }} tài liệu)</span></h3>
+    <p class="doc-hint">Mỗi tài liệu: đặt tên, rồi <strong>dán link Google Drive</strong> hoặc <strong>chọn tệp</strong> (Word, Excel, PowerPoint, PDF, .zip, code .py/.java/.sql/.ipynb..., tối đa {{ document_max_mb|default:10 }} MB/tệp). Tệp lớn hơn hãy tải lên Drive, bật chia sẻ “Bất kỳ ai có đường liên kết” rồi dán link.</p>
+    {{ document_formset.management_form }}
+    {% for e in document_formset.non_form_errors %}<p class="field-errors">{{ e }}</p>{% endfor %}
+    <div class="doc-rows" id="docRows">
+        {% for f in document_formset %}
+            {% include "interactions/_document_row.html" with f=f %}
+        {% endfor %}
+    </div>
+    <template id="docTemplate">{% include "interactions/_document_row.html" with f=document_formset.empty_form %}</template>
+    <button type="button" class="btn btn-secondary btn-sm" id="addDocBtn">+ Thêm tài liệu</button>
+</div>
+<style>
+    .doc-section { margin: 6px 0 18px; }
+    .doc-section h3 { margin-bottom: 4px; }
+    .doc-hint { font-size: 12.5px; color: #64748b; font-weight: 400; margin: 0 0 10px; }
+    .doc-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; max-width: 860px; }
+    .doc-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(220px, 2fr) auto; gap: 10px; align-items: start; background: #f8fafc; border: 1px solid #dbe3ee; border-radius: 10px; padding: 10px; }
+    .doc-row input[type=text], .doc-row input[type=url] { max-width: none; }
+    .doc-source { display: flex; flex-direction: column; gap: 6px; }
+    .doc-file { display: flex; align-items: center; gap: 8px; }
+    .doc-or { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .doc-current { margin: 0; font-size: 12.5px; color: #475569; }
+    .doc-row .doc-delete { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; font-weight: 400; font-size: 13px; color: #b91c1c; white-space: nowrap; }
+    .doc-row .field-errors { grid-column: 1 / -1; margin: 0; color: #b91c1c; font-size: 13px; }
+    @media (max-width: 640px) { .doc-row { grid-template-columns: 1fr; } }
+</style>
+<script>
+    (function () {
+        var rows = document.getElementById('docRows');
+        var tpl = document.getElementById('docTemplate');
+        var addBtn = document.getElementById('addDocBtn');
+        var total = document.querySelector('input[name="{{ document_formset.prefix }}-TOTAL_FORMS"]');
+        var max = document.querySelector('input[name="{{ document_formset.prefix }}-MAX_NUM_FORMS"]');
+        if (!rows || !tpl || !addBtn || !total) { return; }
+        function refresh() { addBtn.hidden = max && parseInt(total.value, 10) >= parseInt(max.value, 10); }
+        addBtn.addEventListener('click', function () {
+            var index = parseInt(total.value, 10);
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = tpl.innerHTML.replace(/__prefix__/g, index).trim();
+            var row = wrapper.firstElementChild;
+            rows.appendChild(row);
+            total.value = index + 1;
+            var first = row.querySelector('input[type=text]');
+            if (first) { first.focus(); }
+            refresh();
+        });
+        refresh();
+    })();
+</script>
+{% endif %}

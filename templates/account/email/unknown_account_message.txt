@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}Bạn nhận được email này vì bạn (hoặc ai đó) đã cố truy cập tài khoản với email {{ email }}. Tuy nhiên, chúng tôi không tìm thấy tài khoản nào như vậy trong hệ thống.
+
+Bạn có thể bỏ qua email này nếu không phải bạn thực hiện thao tác trên.
+
+Nếu đúng là bạn, bạn có thể đăng ký tài khoản mới qua liên kết bên dưới.
+
+{{ signup_url }}{% endautoescape %}{% endblock content %}

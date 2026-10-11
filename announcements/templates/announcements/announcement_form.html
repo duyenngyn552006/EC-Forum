@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Đăng thông báo{% endblock %}
+{% block extra_head %}{{ form.media }}{% endblock %}
+{% block content %}
+<style>
+    /* Khối "Thời gian diễn ra sự kiện" */
+    .event-panel { background: #f8fafc; border: 1px solid #dbe3ee; border-radius: 12px; padding: 16px 18px 12px; margin: 4px 0 18px; max-width: 640px; }
+    .event-panel[hidden] { display: none; }
+    .event-panel-head { font-weight: 700; color: #10233f; font-size: 15px; margin-bottom: 12px; }
+
+    /* Nút chọn kiểu (1 mốc / khoảng): 2 lựa chọn dạng viên thuốc, radio gốc ẩn nhưng vẫn focus được bằng bàn phím */
+    .seg-group { display: inline-flex; background: #e8edf4; border-radius: 999px; padding: 3px; margin-bottom: 14px; }
+    .seg { position: relative; display: inline-block; margin: 0; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+    .seg input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; max-width: none; }
+    .seg span { display: block; padding: 7px 18px; border-radius: 999px; color: #475569; transition: background 0.15s, color 0.15s; }
+    .seg input:checked + span { background: #10233f; color: #fff; box-shadow: 0 1px 4px rgba(16, 35, 63, 0.3); }
+    .seg input:focus-visible + span { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+    .event-field { margin-bottom: 12px; }
+    .event-field-label { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .dt-pair { display: flex; gap: 10px; }
+    .dt-pair input[type=date], .dt-pair input[type=time] { margin: 0; min-width: 0; max-width: none; }
+    .dt-pair input[type=date] { flex: 1.5 1 0; }
+    .dt-pair input[type=time] { flex: 1 1 0; }
+    .event-panel[data-mode="single"] .event-end { display: none; }
+    .event-hint { font-size: 12.5px; color: #64748b; margin: 2px 0 0; }
+    .field-errors { color: #b91c1c; font-size: 13px; margin: 6px 0 0; padding: 0; list-style: none; }
+    @media (max-width: 480px) { .dt-pair { flex-direction: column; } }
+
+    /* Ảnh đính kèm: lưới thẻ có ảnh xem trước */
+    .attach-section { margin: 8px 0 18px; }
+    .attach-section h3 { margin-bottom: 10px; }
+    .attach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .attach-card { display: flex; flex-direction: column; gap: 8px; background: #f8fafc; border: 1px solid #dbe3ee; border-radius: 12px; padding: 10px; }
+    .attach-preview { height: 130px; border-radius: 8px; background: #eef1f5; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .attach-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .attach-placeholder { color: #94a3b8; font-size: 12.5px; text-align: center; line-height: 1.6; }
+    .attach-file { margin: 0; font-weight: 400; }
+    .attach-file input[type=file] { width: 100%; font-size: 12.5px; color: #64748b; }
+    .attach-file input[type=file]::file-selector-button { border: 1px solid #cbd5e1; background: #fff; color: #10233f; border-radius: 6px; padding: 5px 10px; margin-right: 8px; font-weight: 600; cursor: pointer; }
+    .attach-file input[type=file]::file-selector-button:hover { background: #eef1f5; }
+    .attach-card input[type=text] { max-width: none; }
+    .attach-delete { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; font-size: 13px; color: #b91c1c; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+</style>
+
+<div class="card">
+    <h1>Đăng / sửa thông báo</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for field in form %}
+            {% if field.name != "event_time_mode" and field.name != "event_datetime" and field.name != "event_end_datetime" %}
+                <p>
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}<span class="event-hint">{{ field.help_text }}</span>{% endif %}
+                    {% if field.errors %}<ul class="field-errors">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                </p>
+            {% endif %}
+        {% endfor %}
+
+        <div class="event-panel" id="eventPanel" data-mode="{{ form.event_time_mode.value|default:'single' }}">
+            <div class="event-panel-head">🗓️ Thời gian diễn ra sự kiện</div>
+            <div class="seg-group" role="radiogroup" aria-label="Kiểu thời gian">
+                {% for radio in form.event_time_mode %}
+                    <label class="seg">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+                {% endfor %}
+            </div>
+
+            <div class="event-field">
+                <div class="event-field-label" id="eventStartLabel">Thời điểm diễn ra</div>
+                <div class="dt-pair">{% for w in form.event_datetime.subwidgets %}{{ w }}{% endfor %}</div>
+                {% if form.event_datetime.errors %}<ul class="field-errors">{% for e in form.event_datetime.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            <div class="event-field event-end">
+                <div class="event-field-label">Kết thúc</div>
+                <div class="dt-pair">{% for w in form.event_end_datetime.subwidgets %}{{ w }}{% endfor %}</div>
+                {% if form.event_end_datetime.errors %}<ul class="field-errors">{% for e in form.event_end_datetime.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            <p class="event-hint">Chọn “Một mốc thời gian” cho sự kiện diễn ra tại một thời điểm, hoặc “Khoảng thời gian” cho sự kiện có giờ bắt đầu và kết thúc (có thể kéo dài nhiều ngày).</p>
+        </div>
+
+        <div class="attach-section">
+            <h3>Ảnh đính kèm <span class="event-hint">(không bắt buộc, tối đa {{ formset.max_num }} ảnh)</span></h3>
+            {{ formset.management_form }}
+            {% for e in formset.non_form_errors %}<p class="field-errors">{{ e }}</p>{% endfor %}
+            <div class="attach-grid" id="attachGrid">
+                {% for f in formset %}
+                    {% include "announcements/_attachment_form.html" with f=f %}
+                {% endfor %}
+            </div>
+            <template id="attachTemplate">{% include "announcements/_attachment_form.html" with f=formset.empty_form %}</template>
+            <button type="button" class="btn btn-secondary" id="addAttachBtn">+ Thêm ảnh</button>
+        </div>
+        <button class="btn" type="submit">Lưu</button>
+    </form>
+</div>
+
+<script>
+    (function () {
+        var panel = document.getElementById('eventPanel');
+        var kind = document.getElementById('id_kind');
+        var startLabel = document.getElementById('eventStartLabel');
+        if (!panel) { return; }
+
+        function currentMode() {
+            var checked = panel.querySelector('input[name="event_time_mode"]:checked');
+            return checked ? checked.value : 'single';
+        }
+
+        function sync() {
+            // Chỉ thông báo loại "Sự kiện" mới có khối thời gian
+            panel.hidden = !!kind && kind.value !== 'event';
+            var mode = currentMode();
+            panel.dataset.mode = mode;
+            startLabel.textContent = mode === 'range' ? 'Bắt đầu' : 'Thời điểm diễn ra';
+        }
+
+        panel.querySelectorAll('input[name="event_time_mode"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                // Chuyển sang "Khoảng thời gian": gợi ý sẵn ngày kết thúc = ngày bắt đầu
+                var startDate = panel.querySelector('input[name="event_datetime_0"]');
+                var endDate = panel.querySelector('input[name="event_end_datetime_0"]');
+                if (currentMode() === 'range' && startDate && endDate && startDate.value && !endDate.value) {
+                    endDate.value = startDate.value;
+                }
+                sync();
+            });
+        });
+        if (kind) { kind.addEventListener('change', sync); }
+        sync();
+    })();
+
+    (function () {
+        // Ảnh đính kèm: thêm ô mới từ mẫu empty_form + xem trước ảnh vừa chọn
+        var grid = document.getElementById('attachGrid');
+        var tpl = document.getElementById('attachTemplate');
+        var addBtn = document.getElementById('addAttachBtn');
+        var total = document.querySelector('input[name="attachments-TOTAL_FORMS"]');
+        var max = document.querySelector('input[name="attachments-MAX_NUM_FORMS"]');
+        if (!grid || !tpl || !addBtn || !total) { return; }
+
+        function refreshAddBtn() {
+            addBtn.hidden = max && parseInt(total.value, 10) >= parseInt(max.value, 10);
+        }
+
+        addBtn.addEventListener('click', function () {
+            var index = parseInt(total.value, 10);
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = tpl.innerHTML.replace(/__prefix__/g, index).trim();
+            grid.appendChild(wrapper.firstElementChild);
+            total.value = index + 1;
+            refreshAddBtn();
+        });
+
+        grid.addEventListener('change', function (event) {
+            var input = event.target;
+            if (input.type !== 'file' || !input.files || !input.files[0]) { return; }
+            var preview = input.closest('.attach-card').querySelector('.attach-preview');
+            var img = document.createElement('img');
+            img.alt = '';
+            img.src = URL.createObjectURL(input.files[0]);
+            preview.innerHTML = '';
+            preview.appendChild(img);
+        });
+        refreshAddBtn();
+    })();
+</script>
+{% endblock %}

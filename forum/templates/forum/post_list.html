@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Diễn đàn{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Diễn đàn thảo luận</h1>
+    {% if user.is_authenticated %}<a class="btn" href="{% url 'forum:post_create' %}">+ Đăng bài mới</a>{% endif %}
+</div>
+
+<div class="card">
+    <div class="filter-pills">
+        <a href="{% url 'forum:post_list' %}" {% if not request.resolver_match.kwargs.category_slug %}class="active"{% endif %}>Tất cả</a>
+        {% for c in categories %}
+            <a href="{% url 'forum:post_list_by_category' c.slug %}" {% if request.resolver_match.kwargs.category_slug == c.slug %}class="active"{% endif %}>{{ c.name }}</a>
+        {% endfor %}
+    </div>
+    {% if user.is_authenticated and current_category %}
+        <form method="post" action="{% url 'interactions:toggle_follow' 'category' current_category.pk %}" style="margin-top:12px;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn {% if following_category %}btn-secondary{% endif %}" type="submit">{% if following_category %}🔕 Bỏ theo dõi “{{ current_category.name }}”{% else %}🔔 Theo dõi chuyên mục “{{ current_category.name }}”{% endif %}</button>
+        </form>
+    {% endif %}
+    {% if user.is_authenticated and current_tag_obj %}
+        <form method="post" action="{% url 'interactions:toggle_follow' 'tag' current_tag_obj.pk %}" style="margin-top:12px;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn {% if following_tag %}btn-secondary{% endif %}" type="submit">{% if following_tag %}🔕 Bỏ theo dõi thẻ #{{ current_tag_obj.name }}{% else %}🔔 Theo dõi thẻ #{{ current_tag_obj.name }}{% endif %}</button>
+        </form>
+    {% endif %}
+    <form method="get" class="filter-grid" style="margin-top:12px;">
+        <div>
+            <label>Loại bài</label>
+            <select name="kind" onchange="this.form.submit()">
+                <option value="" {% if not current_kind %}selected{% endif %}>Tất cả</option>
+                <option value="question" {% if current_kind == "question" %}selected{% endif %}>Hỏi đáp</option>
+                <option value="unsolved" {% if current_kind == "unsolved" %}selected{% endif %}>Hỏi đáp chưa giải đáp</option>
+            </select>
+        </div>
+        <div>
+            <label>Thẻ</label>
+            <select name="tag" onchange="this.form.submit()">
+                <option value="">Tất cả</option>
+                {% for t in tags %}
+                    <option value="{{ t.slug }}" {% if t.slug == current_tag %}selected{% endif %}>#{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Sắp xếp</label>
+            <select name="sort" onchange="this.form.submit()">
+                <option value="new" {% if current_sort == "new" %}selected{% endif %}>Mới nhất</option>
+                <option value="activity" {% if current_sort == "activity" %}selected{% endif %}>Hoạt động gần nhất</option>
+            </select>
+        </div>
+        <noscript>
+        <div>
+            <label>&nbsp;</label>
+            <button class="btn" type="submit">Lọc</button>
+        </div>
+        </noscript>
+    </form>
+</div>
+
+{% for post in posts %}
+<div class="list-card{% if post.is_pinned %} pinned{% endif %}">
+    {% if post.featured_image %}
+        <img src="{{ post.featured_image.url }}" alt="" class="list-thumb">
+    {% else %}
+        <div class="list-avatar">{{ post.author.get_full_name|default:post.author.email|first|upper }}</div>
+    {% endif %}
+    <div class="list-body">
+        <div class="list-meta">
+            {% if post.is_pinned %}<span class="badge">📌 Đã ghim</span>{% endif %}
+            {% if post.is_question %}{% if post.accepted_answer_id %}<span class="badge" style="background:#e3f7e9;color:#14532d;">✔ Đã giải đáp</span>{% else %}<span class="badge">❓ Câu hỏi</span>{% endif %}{% endif %}
+            <span class="badge">{{ post.category.name }}</span>
+            <span>{{ post.author }}</span>
+            <span>· {{ post.created_at|date:"d/m/Y H:i" }}</span>
+            {% if post.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+            <span>· 👁️ {{ post.view_count }}</span>
+            <span>· 💬 {{ post.comment_count }}</span>
+            <span>· 👍 {{ post.like_count }}</span>
+        </div>
+        <h3 class="list-title"><a href="{% url 'forum:post_detail' post.pk %}">{{ post.title }}</a></h3>
+        <p class="list-excerpt">{{ post.body|striptags|truncatewords:28 }}</p>
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>Chưa có bài viết nào.</p>
+</div>
+{% endfor %}
+{% include "_pagination.html" with noun="bài viết" %}
+{% endblock %}

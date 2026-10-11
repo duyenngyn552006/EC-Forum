@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Từ chối bài viết trong nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Từ chối bài viết "{{ post.title }}" ({{ post.author }})</h1>
+    {% if sensitive_keyword_note %}
+        <p><span style="background:#fde8e8;color:#7f1d1d;font-weight:bold;padding:3px 10px;border-radius:999px;font-size:12.5px;">⚠️ Có chứa từ khóa nhạy cảm: '{{ sensitive_keyword_note }}'</span></p>
+    {% endif %}
+    <div style="background:#f9fafb; border-radius:6px; padding:10px; margin-bottom:14px;">{{ post.body|safe }}</div>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-danger" type="submit">Từ chối</button>
+    </form>
+</div>
+{% endblock %}

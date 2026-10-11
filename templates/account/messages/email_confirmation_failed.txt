@@ -1,0 +1,1 @@
+Không thể xác nhận {{ email }} vì email này đã được xác nhận bởi một tài khoản khác.

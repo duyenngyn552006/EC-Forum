@@ -1,0 +1,7 @@
+{% autoescape off %}Xin chào từ {{ current_site.name }}!
+
+{% block content %}{% endblock content %}
+
+Cảm ơn bạn đã sử dụng {{ current_site.name }}!
+{{ current_site.domain }}
+{% endautoescape %}

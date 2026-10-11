@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block content %}
+<style>
+    .recruit-box { background: #f4f8ff; border: 1px solid #c7d9f7; border-radius: 8px; padding: 12px 14px; margin: 10px 0 14px; }
+</style>
+<div class="cover-header">
+    <div class="cover-banner" {% if group.cover_image %}style="background-image: url('{{ group.cover_image.url }}');"{% endif %}></div>
+    <div class="cover-avatar">
+        {% if group.logo %}
+            <img src="{{ group.logo.url }}" alt="{{ group.name }}">
+        {% else %}
+            {{ group.name|first|upper }}
+        {% endif %}
+    </div>
+</div>
+<div class="card">
+    {% if group.status == "disabled" %}<span class="badge">⚠️ Nhóm đã bị vô hiệu hóa</span>{% endif %}
+    <h1>{{ group.name }}</h1>
+    <p>{{ group.description|linebreaks }}</p>
+    <p>Tạo bởi {{ group.created_by }} · {{ group.created_at|date:"d/m/Y" }}</p>
+    {% if group.is_recruiting_open %}
+        <div class="recruit-box">
+            <strong>🔎 Nhóm đang tuyển thành viên</strong>
+            <p style="margin:6px 0;">{{ group.recruit_positions|linebreaksbr }}</p>
+            <p style="margin:0;font-size:13px;color:#6b7280;">{% if group.recruit_deadline %}Hạn nhận đăng ký: {{ group.recruit_deadline|date:"d/m/Y" }}{% else %}Nhận đăng ký đến khi nhóm đóng tuyển{% endif %}</p>
+        </div>
+    {% endif %}
+    {% if is_member %}
+        <a class="btn" href="{% url 'groups:post_create' group.slug %}">+ Đăng bài trong nhóm</a>
+    {% elif user.is_authenticated and group.status == "active" %}
+        {% if has_pending_join_request %}
+            <span class="badge">Yêu cầu tham gia đang chờ duyệt</span>
+        {% else %}
+            <form method="post" action="{% url 'groups:join_request_create' group.slug %}" {% if not group.is_recruiting_open %}style="display:inline;"{% endif %}>
+                {% csrf_token %}
+                {% if group.is_recruiting_open %}
+                    <textarea name="message" rows="2" placeholder="Giới thiệu ngắn về bạn: vị trí/kỹ năng bạn có thể đảm nhận (không bắt buộc)"></textarea>
+                {% endif %}
+                <button class="btn" type="submit">Xin tham gia nhóm</button>
+            </form>
+        {% endif %}
+    {% endif %}
+    {% if my_role == "leader" or is_staff_user %}
+        <a class="btn btn-secondary" href="{% url 'groups:edit' group.slug %}">Sửa thông tin nhóm</a>
+    {% endif %}
+    {% if is_staff_user %}
+        {% if group.status == "active" %}
+            <a class="btn btn-danger" href="{% url 'groups:disable' group.slug %}">Vô hiệu hóa nhóm</a>
+        {% elif group.status == "disabled" %}
+            <form method="post" action="{% url 'groups:enable' group.slug %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn" type="submit">Kích hoạt lại nhóm</button>
+            </form>
+        {% endif %}
+    {% endif %}
+    {% if is_member %}
+        <form method="post" action="{% url 'groups:leave' group.slug %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-secondary" type="submit">Rời nhóm</button>
+        </form>
+    {% endif %}
+</div>
+
+<div class="tab-bar">
+    <button type="button" class="active" onclick="switchGroupTab(this, 'tab-discussion')">Bài viết trong nhóm</button>
+    <button type="button" onclick="switchGroupTab(this, 'tab-members')">Thành viên ({{ group.memberships.count }})</button>
+    {% if is_manager %}
+        <button type="button" onclick="switchGroupTab(this, 'tab-moderation')">Duyệt nội dung ({{ pending_posts|length }})</button>
+    {% endif %}
+</div>
+
+<div id="tab-discussion" class="tab-panel">
+    <div class="filter-pills" style="margin-bottom:12px;">
+        <a href="?sort=new" {% if current_sort == "new" %}class="active"{% endif %}>Mới nhất</a>
+        <a href="?sort=activity" {% if current_sort == "activity" %}class="active"{% endif %}>Hoạt động gần nhất</a>
+    </div>
+    {% for p in posts %}
+    <div class="list-card">
+        {% if p.featured_image %}
+            <img src="{{ p.featured_image.url }}" alt="" class="list-thumb">
+        {% else %}
+            <div class="list-avatar">{{ p.author.get_full_name|default:p.author.email|first|upper }}</div>
+        {% endif %}
+        <div class="list-body">
+            <div class="list-meta">
+                <span>{{ p.author }}</span>
+                <span>· {{ p.created_at|date:"d/m/Y H:i" }}</span>
+                {% if p.is_edited %}<span>· <em>đã chỉnh sửa</em></span>{% endif %}
+                <span>· 👁️ {{ p.view_count }}</span>
+                <span>· 💬 {{ p.comment_count }}</span>
+                <span>· 👍 {{ p.like_count }}</span>
+            </div>
+            <h3 class="list-title"><a href="{% url 'groups:post_detail' group.slug p.pk %}">{{ p.title }}</a></h3>
+            <p class="list-excerpt">{{ p.body|striptags|truncatewords:28 }}</p>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card">
+        <p>Chưa có bài đăng.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_manager %}
+<div id="tab-moderation" class="tab-panel" hidden>
+    {% for pp in pending_posts %}
+    <div class="card">
+        <p><strong>{{ pp.title }}</strong> — {{ pp.author }} · {{ pp.created_at|date:"d/m/Y H:i" }}</p>
+        {% if pp.sensitive_keyword_note %}
+            <p><span style="background:#fde8e8;color:#7f1d1d;font-weight:bold;padding:3px 10px;border-radius:999px;font-size:12.5px;">⚠️ Có chứa từ khóa nhạy cảm: '{{ pp.sensitive_keyword_note }}'</span></p>
+        {% else %}
+            <p><span style="background:#e3f7e9;color:#14532d;font-weight:bold;padding:3px 10px;border-radius:999px;font-size:12.5px;">Đang chờ xét duyệt</span></p>
+        {% endif %}
+        <div style="background:#f9fafb; border-radius:6px; padding:10px; margin-bottom:10px;">{{ pp.body|safe }}</div>
+        <form method="post" action="{% url 'groups:post_approve' group.slug pp.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Duyệt</button>
+        </form>
+        <a class="btn btn-danger" href="{% url 'groups:post_reject' group.slug pp.pk %}">Từ chối</a>
+    </div>
+    {% empty %}
+    <div class="card">
+        <p>Không có bài viết nào chờ duyệt.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div id="tab-members" class="tab-panel" hidden>
+    {% if is_manager %}
+    <div class="card">
+        <h3>Mời thành viên</h3>
+        <form method="post" action="{% url 'groups:member_add' group.slug %}" class="search-bar" style="max-width:420px;">
+            {% csrf_token %}
+            <input type="email" name="email" placeholder="Email người muốn mời (@due.udn.vn)" required>
+            <button type="submit">Mời</button>
+        </form>
+        <h4 style="margin-top:16px;">Mời hàng loạt bằng tệp CSV</h4>
+        <p style="font-size:13px;color:#6b7280;">Tệp .csv, mỗi dòng 1 email ở cột đầu tiên (dòng đầu có thể là dòng tiêu đề "email").</p>
+        <form method="post" action="{% url 'groups:member_bulk_invite' group.slug %}" enctype="multipart/form-data" class="search-bar" style="max-width:420px;">
+            {% csrf_token %}
+            <input type="file" name="csv_file" accept=".csv" required>
+            <button type="submit">Tải lên</button>
+        </form>
+    </div>
+    {% if my_role == "leader" %}
+    <div class="card">
+        <h3>Chuyển quyền trưởng nhóm</h3>
+        <p style="font-size:13px;color:#6b7280;">Trưởng nhóm cũ sẽ xuống làm phó nhóm (điều hành).</p>
+        <form method="post" action="{% url 'groups:transfer_leadership' group.slug %}" class="search-bar" style="max-width:420px;">
+            {% csrf_token %}
+            <select name="new_leader_id" required>
+                <option value="">— Chọn thành viên —</option>
+                {% for m in memberships %}
+                    {% if m.role != "leader" %}
+                        <option value="{{ m.user.pk }}">{{ m.user }} ({{ m.get_role_display }})</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <button type="submit">Chuyển</button>
+        </form>
+    </div>
+    {% endif %}
+    {% if pending_join_requests %}
+    <div class="card">
+        <h3>Yêu cầu xin tham gia nhóm ({{ pending_join_requests|length }})</h3>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Người xin tham gia</th><th>Lời nhắn</th><th>Hành động</th></tr></thead>
+                <tbody>
+                {% for jr in pending_join_requests %}
+                    <tr>
+                        <td>{{ jr.user }}</td>
+                        <td>{{ jr.message|default:"—"|truncatewords:15 }}</td>
+                        <td>
+                            <form method="post" action="{% url 'groups:join_request_approve' group.slug jr.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" style="padding:4px 10px;font-size:12px;">Chấp nhận</button>
+                            </form>
+                            <a class="btn btn-danger" style="padding:4px 10px;font-size:12px;" href="{% url 'groups:join_request_reject' group.slug jr.pk %}">Từ chối</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr><th>Thành viên</th><th>Vai trò</th>{% if is_manager %}<th>Hành động</th>{% endif %}</tr>
+            </thead>
+            <tbody>
+            {% for m in memberships %}
+                <tr>
+                    <td>{{ m.user }}</td>
+                    <td>{{ m.get_role_display }}</td>
+                    {% if is_manager %}
+                    <td>
+                        {% if m.role == "leader" %}
+                            <span style="color:#6b7280;">—</span>
+                        {% else %}
+                            <form method="post" action="{% url 'groups:member_role' group.slug m.user.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                {% if m.role == "member" %}
+                                    <input type="hidden" name="role" value="moderator">
+                                    <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Đặt làm phó nhóm</button>
+                                {% else %}
+                                    <input type="hidden" name="role" value="member">
+                                    <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Bỏ vai trò phó nhóm</button>
+                                {% endif %}
+                            </form>
+                            <form method="post" action="{% url 'groups:member_remove' group.slug m.user.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">Xóa</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr><td colspan="3">Chưa có thành viên.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function switchGroupTab(button, panelId) {
+        document.querySelectorAll('.tab-bar button').forEach(function (b) { b.classList.remove('active'); });
+        button.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.hidden = true; });
+        document.getElementById(panelId).hidden = false;
+    }
+</script>
+{% endblock %}

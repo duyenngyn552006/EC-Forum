@@ -1,0 +1,13 @@
+{% extends "account/base_entrance.html" %}
+{% load allauth %}
+{% block head_title %}Xác thực địa chỉ email{% endblock head_title %}
+{% block entrance %}
+    {% element h1 %}
+        Xác thực địa chỉ email
+    {% endelement %}
+    {% element p %}
+        Chúng tôi đã gửi một email xác thực đến địa chỉ bạn vừa đăng ký. Vui lòng bấm vào liên kết trong
+        email đó để hoàn tất quá trình đăng ký. Nếu không thấy email trong hộp thư đến, hãy kiểm tra thư mục
+        Spam/Quảng cáo. Nếu sau vài phút vẫn chưa nhận được email xác thực, vui lòng liên hệ Giáo vụ Khoa.
+    {% endelement %}
+{% endblock entrance %}

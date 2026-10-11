@@ -1,0 +1,12 @@
+{% extends "account/base_entrance.html" %}
+{% load allauth %}
+{% block head_title %}Tài khoản đã bị khóa{% endblock head_title %}
+{% block entrance %}
+    {% element h1 %}
+        Tài khoản đã bị khóa
+    {% endelement %}
+    {% element p %}
+        Tài khoản này hiện đang bị khóa. Nếu bạn cho rằng đây là nhầm lẫn, vui lòng gửi kháng nghị để
+        Giáo vụ Khoa xem xét.
+    {% endelement %}
+{% endblock entrance %}

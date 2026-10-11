@@ -1,0 +1,1 @@
+Đã xóa địa chỉ email {{ email }}.

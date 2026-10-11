@@ -1,0 +1,51 @@
+{# Danh sach tai lieu dinh kem (link Google Drive) o trang chi tiet bai viet - can `documents` trong context #}
+{% if documents %}
+<div class="doc-list">
+    <h3>📎 Tài liệu đính kèm ({{ documents|length }})</h3>
+    {% if not user.is_authenticated %}<p class="doc-kind" style="margin:-4px 0 10px;"><a href="{% url 'account_login' %}">Đăng nhập</a> để tải tệp đính kèm.</p>{% endif %}
+    <div class="doc-cards">
+        {% for d in documents %}
+            {% with kind=d.kind %}
+            {% if d.is_upload %}
+            <a class="doc-card doc-{{ kind.key }}" href="{{ d.get_download_url }}" download>
+                <span class="doc-icon" aria-hidden="true">{{ kind.icon }}</span>
+                <span class="doc-text">
+                    <span class="doc-title">{{ d.title }}</span>
+                    <span class="doc-kind">{{ kind.label }} · {{ d.file_size|filesizeformat }} · tải về ⬇</span>
+                </span>
+            </a>
+            {% else %}
+            <a class="doc-card doc-{{ kind.key }}" href="{{ d.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="doc-icon" aria-hidden="true">{{ kind.icon }}</span>
+                <span class="doc-text">
+                    <span class="doc-title">{{ d.title }}</span>
+                    <span class="doc-kind">{{ kind.label }} · mở trong tab mới ↗</span>
+                </span>
+            </a>
+            {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+</div>
+<style>
+    .doc-list { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eef0f2; }
+    .doc-list h3 { margin: 0 0 10px; font-size: 15px; }
+    .doc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .doc-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #dbe3ee; border-left-width: 4px; border-radius: 10px; background: #fff; text-decoration: none; transition: box-shadow 0.15s, transform 0.15s; }
+    .doc-card:hover { box-shadow: 0 6px 16px rgba(16, 35, 63, 0.12); transform: translateY(-1px); }
+    .doc-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    .doc-icon { font-size: 24px; line-height: 1; }
+    .doc-text { display: flex; flex-direction: column; min-width: 0; }
+    .doc-title { font-weight: 600; color: #10233f; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-kind { font-size: 12px; color: #64748b; }
+    /* Viền trái theo loại tài liệu (kèm icon + chữ, không chỉ dựa vào màu) */
+    .doc-card.doc-doc { border-left-color: #2563eb; }
+    .doc-card.doc-sheet { border-left-color: #15803d; }
+    .doc-card.doc-slide { border-left-color: #c2410c; }
+    .doc-card.doc-form { border-left-color: #7c3aed; }
+    .doc-card.doc-folder { border-left-color: #ca8a04; }
+    .doc-card.doc-file { border-left-color: #64748b; }
+    .doc-card.doc-pdf { border-left-color: #b91c1c; }
+    .doc-card.doc-code { border-left-color: #0f172a; }
+</style>
+{% endif %}

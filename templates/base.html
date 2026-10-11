@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <script>
+        (function () {
+            var theme = null;
+            try { theme = localStorage.getItem('ecforum-theme'); } catch (e) { /* trinh duyet chan localStorage */ }
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <title>{% block title %}EC Forum{% endblock %}</title>
+    <style>
+        /* Footer luôn ở đáy màn hình kể cả trang ít nội dung: body xếp cột, main giãn chiếm phần còn trống */
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #1a1a1a; min-height: 100vh; display: flex; flex-direction: column; }
+        body > header, body > .site-footer { flex-shrink: 0; }
+        header { background: #10233f; color: #fff; padding: 12px clamp(16px, 3vw, 40px); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        header a { color: #fff; text-decoration: none; margin-right: 14px; }
+        header nav a { font-size: 14px; }
+        .header-left { display: flex; align-items: center; flex-wrap: wrap; }
+        .header-right { display: flex; align-items: center; flex-wrap: wrap; }
+        main { flex: 1 0 auto; width: 100%; box-sizing: border-box; max-width: 1320px; margin: 24px auto; padding: 0 clamp(16px, 3vw, 40px); }
+
+        .site-footer { background: #10233f; color: #d7deeb; margin-top: 24px; }
+        .site-footer-inner { max-width: 1320px; margin: 0 auto; padding: 28px clamp(16px, 3vw, 40px); display: flex; flex-wrap: wrap; gap: 32px; justify-content: space-between; }
+        .site-footer-brand { flex: 1 1 280px; max-width: 420px; }
+        .site-footer-brand strong { color: #fff; font-size: 17px; }
+        .site-footer-brand p { font-size: 13px; line-height: 1.6; color: #b6c0d4; margin: 8px 0 0; }
+        .site-footer-links { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+        .site-footer-links h4 { margin: 0 0 4px; color: #fff; font-size: 14px; }
+        .site-footer-links a { color: #d7deeb; text-decoration: none; font-size: 13.5px; }
+        .site-footer-links a:hover { color: #fff; text-decoration: underline; }
+        .site-footer-bottom { border-top: 1px solid rgba(255,255,255,0.12); text-align: center; padding: 14px 16px; font-size: 12.5px; color: #93a0ba; }
+        .card { position: relative; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .messages { list-style: none; padding: 0; }
+        .messages li { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
+        .messages .success { background: #e3f7e9; color: #14532d; }
+        .messages .error { background: #fde8e8; color: #7f1d1d; }
+        .messages .warning { background: #fff6da; color: #78530b; }
+        .messages .info { background: #e6f0ff; color: #1e3a8a; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eef1f5; color: #1a1a1a; }
+        .pill.answer-pill { background: #e3f7e9; color: #14532d; font-weight: 600; }
+        .btn { display: inline-block; padding: 6px 12px; border-radius: 6px; background: #10233f; color: #fff; text-decoration: none; border: none; cursor: pointer; transition: background 0.15s; font: inherit; font-size: 14px; line-height: 1.5; vertical-align: middle; }
+        .btn:hover { background: #16305c; }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #57606f; }
+        .btn-success { background: #15803d; }
+        .btn-success:hover { background: #116932; }
+        .btn-danger { background: #b91c1c; }
+        .btn-danger:hover { background: #991414; }
+
+        /* Input/textarea/select dung chung cho toan bo form (form.as_p khong tu co class) */
+        form label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; color: #1a1a1a; }
+        form p { margin: 0 0 16px; }
+        input[type=text], input[type=email], input[type=password], input[type=number],
+        input[type=date], input[type=time], input[type=url], input[type=tel], input[type=search],
+        input[type=datetime-local], textarea, select {
+            width: 100%; max-width: 640px; box-sizing: border-box; padding: 9px 12px;
+            border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit;
+            background: #fff; color: #1a1a1a; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus,
+        input[type=date]:focus, input[type=time]:focus, input[type=url]:focus, input[type=tel]:focus,
+        input[type=search]:focus, input[type=datetime-local]:focus, textarea:focus, select:focus {
+            outline: none; border-color: #10233f; box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.12);
+        }
+        /* Ô ngày / giờ: gọn theo nội dung và nằm cạnh nhau có khoảng cách (SplitDateTimeWidget in 2 ô liền nhau) */
+        input[type=date], input[type=time], input[type=datetime-local] { width: auto; min-width: 170px; max-width: 100%; margin: 0 8px 4px 0; }
+        textarea { min-height: 100px; resize: vertical; }
+        select { cursor: pointer; }
+        input[type=checkbox], input[type=radio] { width: 16px; height: 16px; max-width: none; margin: 0 6px 0 0; accent-color: #10233f; cursor: pointer; vertical-align: middle; flex-shrink: 0; }
+        input::placeholder, textarea::placeholder { color: #9ca3af; }
+
+        /* Ô chọn file (tải ảnh/tệp): nút "Chọn tệp" cùng kiểu với .btn thay cho nút xám mặc định */
+        input[type=file] { font: inherit; font-size: 13px; color: #64748b; max-width: 100%; }
+        input[type=file]::file-selector-button {
+            border: 1px solid #cbd5e1; background: #fff; color: #10233f; border-radius: 6px; padding: 7px 14px;
+            margin-right: 10px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+        }
+        input[type=file]::file-selector-button:hover { background: #eef1f5; border-color: #94a3b8; }
+        /* ClearableFileInput ("Hiện tại: ... [ ] Xóa / Thay đổi: [tệp]"): nhãn "Xóa" nằm cùng dòng, không in đậm */
+        form label[for$="-clear_id"] { display: inline; font-weight: 400; margin: 0 12px 0 0; }
+        form p:has(> input[type=file]) a { word-break: break-all; }
+
+        /* form.as_p với 1 ô checkbox (BooleanField): đưa checkbox lên trước nhãn, cùng 1 dòng */
+        form p:has(> input[type=checkbox]:only-of-type):not(:has(> input[type=file])) { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 8px; }
+        form p:has(> input[type=checkbox]:only-of-type):not(:has(> input[type=file])) > label { margin: 0; font-weight: 500; font-size: 14px; cursor: pointer; }
+        /* Nhãn bọc checkbox/radio (<label><input> Chữ</label>): canh giữa, chữ thường */
+        form label:has(> input[type=checkbox]), form label:has(> input[type=radio]) { display: flex; align-items: center; font-weight: 500; font-size: 14px; cursor: pointer; }
+        /* Danh sách nhiều checkbox (CheckboxSelectMultiple, vd chọn thẻ): dạng chip, chip được chọn tô đậm */
+        form div[id^="id_"]:has(> div > label > input[type=checkbox]) { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        form div[id^="id_"] > div > label:has(> input[type=checkbox]) {
+            margin: 0; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 999px; background: #fff;
+            font-size: 13.5px; transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        form div[id^="id_"] > div > label:has(> input[type=checkbox]:checked) { background: #10233f; border-color: #10233f; color: #fff; }
+
+        /* Lỗi & gợi ý mặc định của Django form */
+        .errorlist { list-style: none; margin: 0 0 6px; padding: 0; color: #b91c1c; font-size: 13px; font-weight: 500; }
+        .errorlist.nonfield { background: #fde8e8; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; }
+        .helptext { display: block; margin-top: 4px; font-size: 12.5px; color: #64748b; }
+        .helptext ul, form ul:not(.errorlist):not(.messages) { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: #64748b; line-height: 1.6; }
+
+        /* Khối thu gọn (vd lịch sử chỉnh sửa) */
+        details { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; background: #fafbfc; }
+        details summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #10233f; }
+        details[open] summary { margin-bottom: 8px; }
+
+        /* Màu liên kết chung trong nội dung: không chuyển tím khi đã bấm. Dùng :where() để độ ưu tiên thấp nhất,
+           mọi class riêng (.btn, .list-title a, .more-link ...) vẫn thắng */
+        main :where(a, a:visited) { color: #1d4ed8; text-underline-offset: 2px; }
+        main :where(a:hover) { color: #1e40af; }
+
+        /* Liên kết "Xem thêm / Xem tất cả →": chữ đậm vừa, không gạch chân, mũi tên nhích phải khi rê chuột */
+        .more-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 14px; font-weight: 600; color: #10233f !important; text-decoration: none; padding: 6px 2px; border-radius: 6px; }
+        .more-link .arrow { transition: transform 0.15s; }
+        .more-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+        .more-link:hover .arrow { transform: translateX(3px); }
+        .more-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .more-link-sm { margin-top: 0; padding: 0; font-size: 12.5px; }
+
+        /* Phân trang dùng chung (templates/_pagination.html) */
+        .pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 20px 0 6px; }
+        .pagination .page-link {
+            min-width: 38px; height: 38px; box-sizing: border-box; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: #10233f !important; text-decoration: none;
+            font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background 0.15s, border-color 0.15s;
+        }
+        .pagination a.page-link:hover { background: #eef1f5; border-color: #94a3b8; }
+        .pagination a.page-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .pagination .page-link.current { background: #10233f; border-color: #10233f; color: #fff !important; }
+        .pagination .page-link.disabled { color: #b6bcc6 !important; background: #f8fafc; cursor: default; }
+        .pagination .page-gap { color: #94a3b8; padding: 0 2px; }
+        .pagination-info { text-align: center; font-size: 12.5px; color: #64748b; margin: 0 0 8px; }
+
+        /* Chữ chỉ dành cho trình đọc màn hình (nhãn ô nhập không cần hiện ra) */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+        /* Nút nhỏ trong bảng (Sửa / Xóa / Đổi vai trò ...) */
+        .btn-sm { padding: 4px 10px; font-size: 12.5px; }
+        .btn-outline { background: #fff; color: #10233f !important; border: 1px solid #cbd5e1; }
+        .btn-outline:hover { background: #eef1f5; }
+        .btn-outline.danger-text { color: #b91c1c !important; border-color: #f3c4c4; }
+        .btn-outline.danger-text:hover { background: #fdf2f2; }
+
+        /* Thanh tim kiem gop input + nut thanh 1 khoi bo tron */
+        .search-bar { display: flex; align-items: stretch; max-width: 420px; border: 1px solid #d1d5db; border-radius: 999px; overflow: hidden; background: #fff; transition: box-shadow 0.15s, border-color 0.15s; }
+        .search-bar:focus-within { border-color: #10233f; box-shadow: 0 0 0 3px rgba(16,35,63,0.12); }
+        .search-bar input { flex: 1; border: none; outline: none; padding: 9px 16px; font-size: 14px; background: none; width: auto; max-width: none; min-width: 0; border-radius: 0; }
+        .search-bar input:focus { box-shadow: none; }
+        .search-bar button { border: none; background: #10233f; color: #fff; padding: 0 18px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .search-bar button:hover { background: #16305c; }
+
+        /* O tim kiem o header + dropdown goi y tu lich su tim kiem cua user */
+        .header-search-bar { max-width: 220px; margin-left: 12px; position: relative; }
+        .search-suggest-box { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); z-index: 60; overflow: hidden; }
+        .search-suggest-box[hidden] { display: none; }
+        /* Ô tìm kiếm header không cắt khung gợi ý (search-bar mặc định overflow:hidden để bo góc) */
+        .header-search-bar { overflow: visible; }
+        .header-search-bar input { border-radius: 999px 0 0 999px; }
+        .header-search-bar button { border-radius: 0 999px 999px 0; }
+        .search-suggest-box { left: auto; right: 0; width: 380px; max-width: 90vw; max-height: 70vh; overflow-y: auto; padding: 6px 0; }
+        .search-suggest-heading { padding: 6px 14px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8; }
+        .search-suggest-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; font-size: 13.5px; color: #1a1a1a !important; text-decoration: none; cursor: pointer; margin: 0 !important; }
+        .search-suggest-item:hover, .search-suggest-item.active { background: #eef1f5; }
+        .search-suggest-icon { flex-shrink: 0; width: 20px; text-align: center; }
+        .search-suggest-body { display: flex; flex-direction: column; min-width: 0; }
+        .search-suggest-title { font-weight: 600; color: #10233f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .search-suggest-title mark { background: #fde68a; color: inherit; border-radius: 2px; padding: 0 1px; }
+        .search-suggest-meta { font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .search-suggest-all { border-top: 1px solid #eef0f2; margin-top: 4px !important; }
+        .search-suggest-all .search-suggest-title { color: #1d4ed8; }
+
+        /* Luoi bo loc nhieu field (trang ket qua tim kiem) */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 220px)); gap: 12px; align-items: end; }
+
+        /* Pill loc chuyen muc */
+        .filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .filter-pills a { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #eef1f5; color: #1a1a1a !important; text-decoration: none; font-size: 13px; margin-right: 0 !important; transition: background 0.15s, color 0.15s; }
+        .filter-pills a:hover { background: #dde3ea; }
+        .filter-pills a.active { background: #10233f; color: #fff !important; }
+
+        /* Tab bar dang gach chan (vd tab Thao luan/Thanh vien trong trang nhom) */
+        .tab-bar { display: flex; flex-wrap: wrap; gap: 28px; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px; }
+        .tab-bar button { background: none; border: none; padding: 10px 2px; font-size: 14.5px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; font-family: inherit; }
+        .tab-bar button:hover { color: #10233f; }
+        .tab-bar button.active { color: #10233f; border-bottom-color: #10233f; }
+        .tab-panel[hidden] { display: none; }
+
+        /* Anh bia + logo/avatar tron - dung chung cho trang ho so ca nhan va trang nhom */
+        .cover-header { position: relative; margin-bottom: 56px; }
+        .cover-banner { height: 200px; border-radius: 8px; background: linear-gradient(135deg, #10233f, #2c4a7c); background-size: cover; background-position: center; }
+        .cover-avatar { position: absolute; left: 24px; bottom: -40px; width: 96px; height: 96px; border-radius: 50%; border: 4px solid #f5f6f8; background: #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #fff; overflow: hidden; }
+        .cover-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* The danh sach bai viet/thong bao/nhom - co avatar, hover noi len */
+        .list-card { display: flex; gap: 14px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; margin-bottom: 12px; transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s; }
+        .list-card:hover { box-shadow: 0 6px 18px rgba(16,35,63,0.12); transform: translateY(-1px); border-color: #c7d0dc; }
+        .list-card.pinned { border-left: 4px solid #10233f; }
+        .list-avatar { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: #10233f; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; overflow: hidden; }
+        .list-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        /* Anh dai dien bai dang - vuong bo goc nhe, khac avatar tron cua nguoi dung */
+        .list-thumb { flex-shrink: 0; width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #eef1f5; }
+        .list-body { flex: 1; min-width: 0; }
+        .list-title { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+        .list-title a { color: #10233f !important; text-decoration: none; }
+        .list-title a:hover { text-decoration: underline; }
+        .list-meta { font-size: 12.5px; color: #6b7280; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+        .list-meta .badge { background: #eef1f5; color: #1a1a1a; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; }
+        .list-excerpt { font-size: 13.5px; color: #4b5563; margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+        .home-banner { margin-bottom: 16px; }
+        .home-banner img { width: 100%; height: auto; border-radius: 10px; display: block; }
+
+        /* Bo cuc trang chu: trai Thong bao cua Khoa (ty le 7) / phai Bai viet luot xem
+           cao (ty le 3). 2 cot cao bang nhau nho grid stretch mac dinh (khong set
+           align-items de giu stretch). Duoi 900px xep chong doc cho man hinh nho. */
+        .home-split-73 { display: grid; grid-template-columns: 7fr 3fr; gap: 20px; }
+        @media (max-width: 900px) { .home-split-73 { grid-template-columns: 1fr; } }
+
+        /* 2 BXH canh nhau 50:50 */
+        .home-split-50 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .home-split-50 { grid-template-columns: 1fr; } }
+
+        .feed-list-row { display: flex; gap: 10px; align-items: flex-start; padding-bottom: 14px; border-bottom: 1px solid #eef0f2; text-decoration: none; }
+        .feed-list-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .feed-list-thumb { flex-shrink: 0; width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #eef1f5; }
+        .feed-list-thumb-placeholder { flex-shrink: 0; width: 64px; height: 64px; border-radius: 8px; background: #eef1f5; color: #10233f; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; text-align: center; padding: 4px; }
+        .feed-list-title { font-size: 13.5px; font-weight: 600; color: #10233f !important; line-height: 1.35; }
+
+        /* Thanh nut tuong tac (thich/luu/bao cao) duoi 1 bai viet/thong bao */
+        .action-bar { display: flex; flex-wrap: wrap; gap: 10px; }
+        .action-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px; border: 1px solid #d1d5db; background: #fff; color: #374151; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+        .action-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+        .action-btn.like-btn.active { background: #eaf1ff; border-color: #2563eb; color: #2563eb; }
+        .action-btn.save-btn.active { background: #fff7e6; border-color: #d97706; color: #b45309; }
+        .action-btn.report-btn, .action-btn.danger-outline { color: #b91c1c; border-color: #fca5a5; }
+        .action-btn.report-btn:hover, .action-btn.danger-outline:hover { background: #fef2f2; border-color: #ef4444; }
+        .action-btn.primary-outline { color: #10233f; border-color: #10233f; }
+        .action-btn.primary-outline:hover { background: #eef1f8; }
+        .action-btn.pin-btn.active { background: #fff7e6; border-color: #d97706; color: #b45309; }
+        .action-btn .count { font-weight: 700; }
+        .manage-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+        /* Menu "..." goc tren ben phai bai viet - bam mo dropdown Sua/Xoa/Ghim */
+        .post-menu-wrapper { position: absolute; top: 12px; right: 12px; }
+        .post-menu-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #374151; color: #fff; font-size: 18px; letter-spacing: 1px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .post-menu-btn:hover { background: #4b5563; }
+        .post-menu-dropdown { position: absolute; right: 0; top: 38px; min-width: 170px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 90; padding: 6px 0; }
+        .post-menu-dropdown[hidden] { display: none; }
+        .post-menu-dropdown a, .post-menu-dropdown button { display: block; width: 100%; box-sizing: border-box; text-align: left; padding: 8px 16px; font-size: 14px; color: #1a1a1a !important; background: none; border: none; cursor: pointer; margin-right: 0 !important; text-decoration: none; font-family: inherit; }
+        .post-menu-dropdown a:hover, .post-menu-dropdown button:hover { background: #f5f6f8; }
+        .post-menu-dropdown .danger-text { color: #b91c1c !important; }
+
+        /* Khung binh luan */
+        .comment-composer { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px; }
+        .comment-composer textarea { flex: 1; max-width: none; margin-bottom: 8px; }
+        .comment-composer-actions { display: flex; justify-content: flex-end; }
+        .comment-list { display: flex; flex-direction: column; gap: 4px; }
+        .comment-item { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid #f1f2f4; }
+        .comment-item:first-child { border-top: none; }
+        .comment-bubble { flex: 1; background: #f5f6f8; border-radius: 12px; padding: 10px 14px; }
+        .comment-author { font-weight: 600; font-size: 13.5px; }
+        .comment-time { font-size: 11.5px; color: #6b7280; margin-left: 6px; font-weight: 400; }
+        .comment-body { font-size: 14px; margin: 4px 0 0; color: #1f2937; }
+        .comment-main { flex: 1; min-width: 0; }
+        .reply-toggle-btn { background: none; border: none; color: #6b7280; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
+        .reply-toggle-btn:hover { color: #10233f; text-decoration: underline; }
+        .reply-toggle-btn.danger-text { color: #b91c1c; }
+        .reply-toggle-btn.danger-text:hover { color: #7f1414; }
+        .comment-actions-row { display: flex; gap: 14px; margin-top: 2px; }
+        .reply-list { margin-left: 28px; }
+        .reply-list .comment-item { padding: 8px 0; }
+        .reply-form { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 4px 28px; }
+        .reply-form[hidden] { display: none; }
+        .reply-form textarea { flex: 1; max-width: none; margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; }
+        table th, table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        table th { background: #f8fafc; color: #475569; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #dbe3ee; }
+        table tbody tr:hover { background: #fafbfc; }
+        table td input[type=text] { width: 150px; padding: 5px 9px; font-size: 13px; margin-right: 4px; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .rich-content img { max-width: 100%; height: auto; border-radius: 6px; }
+        .rich-content h2, .rich-content h3, .rich-content h4 { margin: 16px 0 8px; }
+        .rich-content ul, .rich-content ol { padding-left: 24px; }
+        /* Khối code trong bài viết: nền tối, giữ thụt lề, cuộn ngang khi dòng dài; nhãn ngôn ngữ + nút Sao chép (JS cuối trang) */
+        .rich-content pre { position: relative; background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 34px 16px 14px; margin: 12px 0; overflow-x: auto; font-size: 13.5px; line-height: 1.6; tab-size: 4; }
+        .rich-content pre code { font-family: Consolas, "Cascadia Code", "Courier New", monospace; background: none; padding: 0; color: inherit; white-space: pre; }
+        .rich-content :not(pre) > code { font-family: Consolas, "Courier New", monospace; background: #eef1f5; color: #b91c1c; padding: 1px 6px; border-radius: 4px; font-size: 0.92em; }
+        .code-lang { position: absolute; top: 8px; left: 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; font-family: system-ui, sans-serif; }
+        .code-copy { position: absolute; top: 6px; right: 8px; border: 1px solid #334155; background: #1e293b; color: #cbd5e1; border-radius: 6px; padding: 3px 10px; font-size: 12px; cursor: pointer; font-family: system-ui, sans-serif; }
+        .code-copy:hover { background: #334155; color: #fff; }
+        .rich-content blockquote { border-left: 3px solid #cbd5e1; margin: 8px 0; padding: 4px 12px; color: #475569; }
+        .rich-content a { color: #10233f; }
+        .brand-logo { height: 32px; display: block; margin-right: 20px; }
+
+        .notif-bell-wrapper { position: relative; display: inline-block; margin-right: 14px; }
+        .bell-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 4px 6px; position: relative; }
+        .bell-badge { position: absolute; top: -2px; right: -2px; background: #dc2626; color: #fff; font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 999px; font-weight: bold; }
+        .notif-dropdown { position: absolute; right: 0; top: 36px; width: 340px; max-width: 90vw; background: #fff; color: #1a1a1a; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; overflow: hidden; }
+        .notif-dropdown-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid #e5e7eb; }
+        .notif-dropdown-header strong { font-size: 16px; }
+        .notif-markall { background: none; border: none; color: #10233f; font-size: 12px; cursor: pointer; padding: 0; }
+        .notif-tabs { display: flex; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #e5e7eb; }
+        .notif-tab { border: none; background: #eef1f5; color: #1a1a1a; padding: 6px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+        .notif-tab.active { background: #10233f; color: #fff; }
+        .notif-list { max-height: 360px; overflow-y: auto; }
+        .notif-item { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; text-decoration: none; color: #1a1a1a; border-bottom: 1px solid #f1f2f4; }
+        .notif-item:hover { background: #f5f6f8; }
+        .notif-item.unread { background: #eaf1ff; }
+        .notif-body { flex: 1; }
+        .notif-text { display: block; font-size: 13px; }
+        .notif-time { display: block; font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .notif-dot { width: 8px; height: 8px; border-radius: 999px; background: #2563eb; margin-top: 4px; flex-shrink: 0; }
+        .notif-empty { padding: 20px 14px; text-align: center; color: #6b7280; font-size: 13px; }
+        .notif-viewall { display: block; text-align: center; padding: 10px; font-size: 13px; color: #10233f; text-decoration: none; border-top: 1px solid #e5e7eb; }
+        .notif-viewall:hover { background: #f5f6f8; }
+
+        /* Nav dang chu - chi hien tren laptop/PC (an tren dien thoai) */
+        .desktop-nav { display: flex; align-items: center; flex-wrap: wrap; }
+        .admin-menu-wrapper { position: relative; display: inline-block; }
+        .admin-menu-btn { background: none; border: none; color: #fff; font-size: 14px; cursor: pointer; padding: 6px 4px; font-family: inherit; }
+        .admin-dropdown { position: absolute; left: 0; top: 30px; min-width: 200px; max-width: 90vw; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; padding: 6px 0; }
+        .admin-dropdown[hidden] { display: none; }
+        .admin-dropdown a { display: block; color: #1a1a1a !important; padding: 8px 16px; font-size: 14px; margin-right: 0 !important; }
+        .admin-dropdown a:hover { background: #f5f6f8; }
+
+        /* Modal xac nhan hien ngay tren trang hien tai (khong chuyen trang) - dung cho
+           dang xuat va cac luong xac nhan tuong tu sau nay */
+        .confirm-modal-overlay { position: fixed; inset: 0; background: rgba(16, 35, 63, 0.55); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .confirm-modal-overlay[hidden] { display: none; }
+        .confirm-modal-card { background: #fff; border-radius: 12px; padding: 28px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .confirm-modal-card h2 { margin: 0 0 12px; font-size: 19px; color: #10233f; }
+        .confirm-modal-card p { margin: 0 0 20px; font-size: 14px; color: #374151; }
+        .confirm-modal-actions { display: flex; gap: 10px; }
+        .confirm-modal-actions button, .confirm-modal-actions a { flex: 1; text-align: center; text-decoration: none; }
+
+        /* Icon luoi 3x3 mo panel menu (kieu "waffle menu") - chi hien tren dien thoai */
+        .grid-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; grid-template-columns: repeat(3, 5px); grid-template-rows: repeat(3, 5px); gap: 3px; align-content: center; justify-content: center; }
+        .grid-menu-btn .dot { width: 5px; height: 5px; background: #fff; border-radius: 1px; }
+
+        /* Panel menu truot tu ben phai */
+        .nav-panel-overlay { position: fixed; inset: 0; background: rgba(16, 35, 63, 0.55); z-index: 250; display: flex; justify-content: flex-end; }
+        .nav-panel-overlay[hidden] { display: none; }
+        .nav-panel { background: #fff; color: #1a1a1a; width: 320px; max-width: 85vw; height: 100%; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,0.25); position: relative; padding: 20px 0; }
+        .nav-panel-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 26px; line-height: 1; color: #9ca3af; cursor: pointer; }
+        .nav-panel-close:hover { color: #10233f; }
+        .nav-panel-logo { text-align: center; padding: 8px 24px 20px; border-bottom: 1px solid #eee; }
+        .nav-panel-logo img { height: 34px; }
+        .nav-panel-list { display: flex; flex-direction: column; }
+        .nav-panel-list a, .nav-panel-accordion-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; padding: 14px 24px; color: #1a1a1a !important; text-decoration: none; border: none; border-top: 1px solid #eee; background: none; font-size: 15px; font-family: inherit; text-align: left; cursor: pointer; margin-right: 0 !important; }
+        .nav-panel-list a:hover, .nav-panel-accordion-btn:hover { background: #f5f6f8; }
+        .nav-panel-accordion-btn .chevron { transition: transform 0.2s; color: #6b7280; }
+        .nav-panel-accordion-btn.open .chevron { transform: rotate(180deg); }
+        .nav-panel-submenu { display: flex; flex-direction: column; background: #f9fafb; }
+        .nav-panel-submenu[hidden] { display: none; }
+        .nav-panel-submenu a { padding: 12px 24px 12px 40px; font-size: 14px; color: #374151 !important; border-top: 1px solid #eee; }
+        .nav-panel-submenu a:hover { background: #eef1f5; }
+
+        /* Gop ten + vai tro thanh 1 khoi gon, bam vao hien dropdown dang xuat */
+        .user-menu-wrapper { position: relative; }
+        .user-menu-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border: none; color: #fff; cursor: pointer; font-family: inherit; padding: 4px 8px; line-height: 1.3; margin-right: 6px; }
+        .user-menu-btn .user-name { font-size: 13px; }
+        .user-dropdown { position: absolute; right: 0; top: 40px; min-width: 180px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 100; padding: 6px 0; }
+        .user-dropdown[hidden] { display: none; }
+        .user-dropdown a { display: block; color: #1a1a1a !important; padding: 8px 16px; font-size: 14px; margin-right: 0 !important; }
+        .user-dropdown a:hover { background: #f5f6f8; }
+
+        /* Responsive - man hinh nho (dien thoai): doi nav chu -> icon luoi + panel.
+           Khoi ten/vai tro gop dropdown dang xuat thi dung chung cho ca PC lan dien thoai. */
+        @media (max-width: 640px) {
+            header { padding: 10px 16px; }
+            main { padding: 0 12px; margin: 16px auto; }
+            .card { padding: 12px; }
+            .notif-dropdown { left: 0; right: auto; width: 90vw; }
+            .auth-modal-card { padding: 24px 18px; }
+
+            .desktop-nav { display: none; }
+            .header-search-bar { display: none; }
+            .grid-menu-btn { display: grid; }
+        }
+
+        /* ================= CHẾ ĐỘ TỐI =================
+           Bật bằng <html data-theme="dark"> (nút 🌙 ở header, lưu localStorage; lần đầu theo cài đặt hệ điều hành).
+           Bảng màu: nền #0b1220 · thẻ #111a2b · thẻ phụ #17223a · viền #26334d · chữ #e5e9f0 · chữ phụ #9aa6b8 · nhấn #60a5fa */
+        html[data-theme="dark"] { color-scheme: dark;
+            --ck-color-base-background: #0f1829; --ck-color-base-foreground: #17223a; --ck-color-base-border: #2c3a55;
+            --ck-color-toolbar-background: #17223a; --ck-color-toolbar-border: #2c3a55; --ck-color-text: #e5e9f0;
+            --ck-color-button-default-hover-background: #26334d; --ck-color-button-on-background: #26334d;
+            --ck-color-button-on-hover-background: #2c3a55; --ck-color-button-on-color: #93c5fd;
+            --ck-color-dropdown-panel-background: #17223a; --ck-color-dropdown-panel-border: #2c3a55;
+            --ck-color-list-background: #17223a; --ck-color-list-button-hover-background: #26334d;
+            --ck-color-list-button-on-background: #2f5aa8; --ck-color-input-background: #0f1829; --ck-color-input-border: #2c3a55;
+            --ck-color-panel-background: #17223a; --ck-color-panel-border: #2c3a55; --ck-color-labeled-field-label-background: #17223a;
+            --ck-color-focus-border: #60a5fa; --ck-color-shadow-inner: transparent; --ck-color-word-count-text: #9aa6b8; }
+        html[data-theme="dark"] body { background: #0b1220; color: #e5e9f0; }
+        html[data-theme="dark"] header { background: #0d1a30; border-bottom: 1px solid #1c2a44; }
+        html[data-theme="dark"] .site-footer { background: #0d1a30; border-top: 1px solid #1c2a44; }
+        html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3, html[data-theme="dark"] h4 { color: #f1f5fb; }
+        html[data-theme="dark"] main :where(a, a:visited) { color: #7cb3ff; }
+        html[data-theme="dark"] main :where(a:hover) { color: #a5c9ff; }
+
+        /* Bề mặt: thẻ, khung, hộp thả xuống, hộp thoại */
+        html[data-theme="dark"] .card, html[data-theme="dark"] .list-card, html[data-theme="dark"] .stat-tile,
+        html[data-theme="dark"] .confirm-modal-card, html[data-theme="dark"] .auth-modal-card,
+        html[data-theme="dark"] .notif-dropdown, html[data-theme="dark"] .admin-dropdown, html[data-theme="dark"] .user-dropdown,
+        html[data-theme="dark"] .post-menu-dropdown, html[data-theme="dark"] .search-suggest-box, html[data-theme="dark"] .mention-suggest-box,
+        html[data-theme="dark"] .nav-panel, html[data-theme="dark"] .reaction-picker, html[data-theme="dark"] .doc-card {
+            background: #111a2b; color: #e5e9f0; border-color: #26334d; }
+        html[data-theme="dark"] .list-card:hover, html[data-theme="dark"] .doc-card:hover { border-color: #3a4a68; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+        html[data-theme="dark"] .comment-bubble, html[data-theme="dark"] details, html[data-theme="dark"] .event-panel,
+        html[data-theme="dark"] .attach-card, html[data-theme="dark"] .doc-row, html[data-theme="dark"] .nav-panel-submenu,
+        html[data-theme="dark"] .poll-option, html[data-theme="dark"] [style*="background:#f9fafb"] {
+            background: #17223a !important; border-color: #26334d !important; color: #e5e9f0; }
+        html[data-theme="dark"] .attach-preview, html[data-theme="dark"] .list-thumb, html[data-theme="dark"] .feed-list-thumb,
+        html[data-theme="dark"] .feed-list-thumb-placeholder, html[data-theme="dark"] .poll-bar, html[data-theme="dark"] .seg-group { background: #22304b; }
+        html[data-theme="dark"] .cover-avatar { border-color: #0b1220; }
+
+        /* Chữ thương hiệu #10233f / chữ đậm tối -> chữ sáng */
+        html[data-theme="dark"] .list-title a, html[data-theme="dark"] .feed-list-title, html[data-theme="dark"] .more-link,
+        html[data-theme="dark"] .search-suggest-title, html[data-theme="dark"] .doc-title, html[data-theme="dark"] .stat-value,
+        html[data-theme="dark"] .event-panel-head, html[data-theme="dark"] details summary, html[data-theme="dark"] .confirm-modal-card h2,
+        html[data-theme="dark"] .rich-content a, html[data-theme="dark"] .notif-markall, html[data-theme="dark"] .notif-viewall,
+        html[data-theme="dark"] .feed-list-thumb-placeholder, html[data-theme="dark"] [style*="color:#10233f"] { color: #dbe7ff !important; }
+        html[data-theme="dark"] .list-excerpt, html[data-theme="dark"] .list-meta, html[data-theme="dark"] .stat-label, html[data-theme="dark"] .stat-sub,
+        html[data-theme="dark"] .doc-kind, html[data-theme="dark"] .doc-hint, html[data-theme="dark"] .event-hint, html[data-theme="dark"] .helptext,
+        html[data-theme="dark"] .pagination-info, html[data-theme="dark"] .poll-meta, html[data-theme="dark"] .search-suggest-meta,
+        html[data-theme="dark"] .confirm-modal-card p, html[data-theme="dark"] .comment-time, html[data-theme="dark"] .event-field-label,
+        html[data-theme="dark"] [style*="color:#6b7280"] { color: #9aa6b8 !important; }
+        html[data-theme="dark"] form label, html[data-theme="dark"] .comment-author, html[data-theme="dark"] .poll-option-count,
+        html[data-theme="dark"] .notif-item, html[data-theme="dark"] .admin-dropdown a, html[data-theme="dark"] .user-dropdown a,
+        html[data-theme="dark"] .post-menu-dropdown a, html[data-theme="dark"] .post-menu-dropdown button, html[data-theme="dark"] .search-suggest-item,
+        html[data-theme="dark"] .nav-panel-list a, html[data-theme="dark"] .nav-panel-accordion-btn, html[data-theme="dark"] .nav-panel-submenu a { color: #e5e9f0 !important; }
+
+        /* Ô nhập liệu */
+        html[data-theme="dark"] input[type=text], html[data-theme="dark"] input[type=email], html[data-theme="dark"] input[type=password],
+        html[data-theme="dark"] input[type=number], html[data-theme="dark"] input[type=date], html[data-theme="dark"] input[type=time],
+        html[data-theme="dark"] input[type=url], html[data-theme="dark"] input[type=tel], html[data-theme="dark"] input[type=search],
+        html[data-theme="dark"] input[type=datetime-local], html[data-theme="dark"] textarea, html[data-theme="dark"] select {
+            background: #0f1829; color: #e5e9f0; border-color: #2c3a55; }
+        html[data-theme="dark"] input:focus, html[data-theme="dark"] textarea:focus, html[data-theme="dark"] select:focus {
+            border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25); }
+        html[data-theme="dark"] input::placeholder, html[data-theme="dark"] textarea::placeholder { color: #6b7a92; }
+        html[data-theme="dark"] input[type=checkbox], html[data-theme="dark"] input[type=radio] { accent-color: #60a5fa; }
+        html[data-theme="dark"] input[type=file] { color: #9aa6b8; }
+        html[data-theme="dark"] input[type=file]::file-selector-button { background: #17223a; color: #dbe7ff; border-color: #2c3a55; }
+        html[data-theme="dark"] .search-bar { background: #0f1829; border-color: #2c3a55; }
+        html[data-theme="dark"] .search-bar input { background: none; }
+        html[data-theme="dark"] form div[id^="id_"] > div > label:has(> input[type=checkbox]) { background: #111a2b; border-color: #2c3a55; }
+        html[data-theme="dark"] form div[id^="id_"] > div > label:has(> input[type=checkbox]:checked) { background: #2f5aa8; border-color: #2f5aa8; color: #fff !important; }
+
+        /* Nút, chip, nhãn */
+        html[data-theme="dark"] .btn { background: #2f5aa8; }
+        html[data-theme="dark"] .btn:hover { background: #3a69c0; }
+        html[data-theme="dark"] .btn-secondary { background: #3b4a63; }
+        html[data-theme="dark"] .btn-secondary:hover { background: #4a5b78; }
+        html[data-theme="dark"] .btn-danger { background: #b42323; }
+        html[data-theme="dark"] .btn-success { background: #1b8a47; }
+        html[data-theme="dark"] .btn-outline, html[data-theme="dark"] .page-link, html[data-theme="dark"] .action-btn {
+            background: #111a2b; color: #dbe7ff !important; border-color: #2c3a55; }
+        html[data-theme="dark"] .btn-outline:hover, html[data-theme="dark"] a.page-link:hover, html[data-theme="dark"] .action-btn:hover { background: #1d2a44; }
+        html[data-theme="dark"] .pagination .page-link.current { background: #2f5aa8; border-color: #2f5aa8; color: #fff !important; }
+        html[data-theme="dark"] .pagination .page-link.disabled { background: #0f1829; color: #4b5a75 !important; }
+        html[data-theme="dark"] .action-btn.like-btn.active { background: #13284d; border-color: #60a5fa; color: #93c5fd !important; }
+        html[data-theme="dark"] .pill, html[data-theme="dark"] .badge, html[data-theme="dark"] .list-meta .badge, html[data-theme="dark"] .filter-pills a,
+        html[data-theme="dark"] .notif-tab { background: #1d2a44; color: #dbe7ff !important; }
+        html[data-theme="dark"] .filter-pills a:hover { background: #26334d; }
+        html[data-theme="dark"] .filter-pills a.active, html[data-theme="dark"] .notif-tab.active, html[data-theme="dark"] .seg input:checked + span { background: #2f5aa8; color: #fff !important; }
+        html[data-theme="dark"] .seg span { color: #b7c3d6; }
+        html[data-theme="dark"] .pill.answer-pill, html[data-theme="dark"] [style*="background:#e3f7e9"] { background: #12382a !important; color: #86efac !important; }
+        html[data-theme="dark"] [style*="background:#fde8e8"] { background: #3d1518 !important; color: #fca5a5 !important; }
+        html[data-theme="dark"] .status-tag { background: #4a3410; color: #fcd34d; }
+        html[data-theme="dark"] .stat-tile.needs-action { background: #2a2312; border-color: #6b5520; }
+        html[data-theme="dark"] .recruit-box { background: #13284d; border-color: #2f5aa8; }
+        html[data-theme="dark"] .poll-option.mine { background: #13284d !important; border-color: #60a5fa !important; }
+        html[data-theme="dark"] .poll-bar-fill { background: #60a5fa; }
+        html[data-theme="dark"] .reaction-pick.active { background: #1d2a44; }
+        /* Viền trái theo loại tài liệu (bản sáng hơn cho nền tối) */
+        html[data-theme="dark"] .doc-card.doc-doc { border-left-color: #60a5fa; }
+        html[data-theme="dark"] .doc-card.doc-sheet { border-left-color: #4ade80; }
+        html[data-theme="dark"] .doc-card.doc-slide { border-left-color: #fb923c; }
+        html[data-theme="dark"] .doc-card.doc-form { border-left-color: #a78bfa; }
+        html[data-theme="dark"] .doc-card.doc-folder { border-left-color: #facc15; }
+        html[data-theme="dark"] .doc-card.doc-pdf { border-left-color: #f87171; }
+        html[data-theme="dark"] .doc-card.doc-code, html[data-theme="dark"] .doc-card.doc-file { border-left-color: #cbd5e1; }
+
+        /* Thông báo hệ thống (messages) */
+        html[data-theme="dark"] .messages .success { background: #12382a; color: #86efac; }
+        html[data-theme="dark"] .messages .error, html[data-theme="dark"] .errorlist.nonfield { background: #3d1518; color: #fca5a5; }
+        html[data-theme="dark"] .messages .warning { background: #3a2c0c; color: #fcd34d; }
+        html[data-theme="dark"] .messages .info { background: #13284d; color: #93c5fd; }
+        html[data-theme="dark"] .errorlist, html[data-theme="dark"] .field-errors { color: #fca5a5; }
+
+        /* Bảng, đường kẻ, hover */
+        html[data-theme="dark"] table th { background: #17223a; color: #9aa6b8; border-color: #26334d; }
+        html[data-theme="dark"] table th, html[data-theme="dark"] table td { border-color: #26334d; }
+        html[data-theme="dark"] table tbody tr:hover { background: #142036; }
+        html[data-theme="dark"] .tab-bar { border-color: #26334d; }
+        html[data-theme="dark"] .tab-bar button { color: #9aa6b8; }
+        html[data-theme="dark"] .tab-bar button.active, html[data-theme="dark"] .tab-bar button:hover { color: #dbe7ff; border-bottom-color: #60a5fa; }
+        html[data-theme="dark"] .feed-list-row, html[data-theme="dark"] .notif-item, html[data-theme="dark"] .notif-dropdown-header,
+        html[data-theme="dark"] .notif-tabs, html[data-theme="dark"] .notif-viewall, html[data-theme="dark"] .search-suggest-all,
+        html[data-theme="dark"] .nav-panel-logo, html[data-theme="dark"] .nav-panel-list a, html[data-theme="dark"] .nav-panel-accordion-btn,
+        html[data-theme="dark"] .nav-panel-submenu a, html[data-theme="dark"] .doc-list { border-color: #26334d !important; }
+        html[data-theme="dark"] .notif-item:hover, html[data-theme="dark"] .notif-viewall:hover, html[data-theme="dark"] .admin-dropdown a:hover,
+        html[data-theme="dark"] .user-dropdown a:hover, html[data-theme="dark"] .post-menu-dropdown a:hover, html[data-theme="dark"] .post-menu-dropdown button:hover,
+        html[data-theme="dark"] .search-suggest-item:hover, html[data-theme="dark"] .search-suggest-item.active, html[data-theme="dark"] .nav-panel-list a:hover,
+        html[data-theme="dark"] .nav-panel-accordion-btn:hover, html[data-theme="dark"] .nav-panel-submenu a:hover, html[data-theme="dark"] .mention-suggest-item:hover,
+        html[data-theme="dark"] .mention-suggest-item.active { background: #1d2a44; }
+        html[data-theme="dark"] .notif-item.unread { background: #13284d; }
+        html[data-theme="dark"] .search-suggest-title mark { background: #7a5c00; color: #fff3c4; }
+
+        /* Nội dung bài viết */
+        html[data-theme="dark"] .rich-content :not(pre) > code { background: #22304b; color: #fca5a5; }
+        html[data-theme="dark"] .rich-content blockquote { border-left-color: #3a4a68; color: #b7c3d6; }
+        html[data-theme="dark"] .rich-content pre { background: #060b16; border: 1px solid #1c2a44; }
+        html[data-theme="dark"] .ck.ck-editor__main > .ck-editor__editable { background: #0f1829; color: #e5e9f0; }
+        html[data-theme="dark"] .ck.ck-editor__main > .ck-editor__editable:not(.ck-focused) { border-color: #2c3a55; }
+
+        /* Nút chuyển sáng/tối */
+        .theme-toggle { background: none; border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; width: 34px; height: 34px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; margin-right: 12px; transition: background 0.15s; }
+        .theme-toggle:hover { background: rgba(255, 255, 255, 0.12); }
+        .theme-toggle:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+        @media (prefers-reduced-motion: no-preference) {
+            html.theme-transition, html.theme-transition * { transition: background-color 0.25s, border-color 0.25s, color 0.25s !important; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+    <div class="header-left">
+        <a href="{% url 'home' %}"><img src="{% static 'img/logo-ngang-white.png' %}" alt="EC Forum" class="brand-logo"></a>
+        <nav class="desktop-nav">
+            <a href="{% url 'announcements:list' %}">Thông báo của Khoa</a>
+            <a href="{% url 'forum:post_list' %}">Diễn đàn</a>
+            <a href="{% url 'groups:list' %}">Nhóm</a>
+            {% if user.is_authenticated %}
+                {% if user.role == 'staff' %}
+                    <div class="admin-menu-wrapper">
+                        <button type="button" class="admin-menu-btn" onclick="toggleAdminMenu(event)">Quản trị ▾</button>
+                        <div class="admin-dropdown" id="adminDropdown" hidden>
+                            <a href="{% url 'dashboard:overview' %}">Dashboard</a>
+                            <a href="{% url 'accounts:user_list' %}">Quản lý tài khoản</a>
+                            <a href="{% url 'groups:pending_list' %}">Duyệt nhóm</a>
+                            <a href="{% url 'moderation:pending_content_list' %}">Duyệt nội dung</a>
+                            <a href="{% url 'moderation:report_list' %}">Báo cáo vi phạm</a>
+                            <a href="{% url 'moderation:appeal_list' %}">Kháng nghị</a>
+                            <a href="{% url 'moderation:keyword_list' %}">Từ khóa nhạy cảm</a>
+                            <a href="{% url 'moderation:log_list' %}">Nhật ký kiểm duyệt</a>
+                            <a href="{% url 'forum:category_list' %}">Chuyên mục diễn đàn</a>
+                            <a href="{% url 'forum:tag_list' %}">Thẻ diễn đàn</a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </nav>
+        <form method="get" action="{% url 'search:results' %}" class="search-bar header-search-bar">
+            <input type="text" name="q" id="headerSearchInput" placeholder="Tìm kiếm..." autocomplete="off" data-suggest-url="{% url 'search:suggest' %}" aria-label="Tìm kiếm">
+            <button type="submit" aria-label="Tìm kiếm">🔍</button>
+        </form>
+        {% if header_recent_searches %}{{ header_recent_searches|json_script:"headerRecentSearchesData" }}{% endif %}
+        <button type="button" class="grid-menu-btn" onclick="toggleNavPanel(event)" aria-label="Menu">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </button>
+    </div>
+    <div class="header-right">
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Bật chế độ tối" aria-pressed="false" title="Chế độ sáng / tối">🌙</button>
+        {% if user.is_authenticated %}
+            <div class="notif-bell-wrapper">
+                <button type="button" class="bell-btn" onclick="toggleNotifDropdown(event)" aria-label="Thông báo">
+                    🔔
+                    {% if bell_unread_count > 0 %}
+                        <span class="bell-badge">{{ bell_unread_count }}</span>
+                    {% endif %}
+                </button>
+                <div class="notif-dropdown" id="notifDropdown" hidden>
+                    <div class="notif-dropdown-header">
+                        <strong>Thông báo</strong>
+                        <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="notif-markall">Đánh dấu tất cả đã đọc</button>
+                        </form>
+                    </div>
+                    <div class="notif-tabs">
+                        <button type="button" class="notif-tab active" onclick="filterNotifTab(this, 'all')">Tất cả</button>
+                        <button type="button" class="notif-tab" onclick="filterNotifTab(this, 'unread')">Chưa đọc</button>
+                    </div>
+                    <div class="notif-list">
+                        {% for n in bell_notifications %}
+                            <a href="{% url 'notifications:click' n.pk %}" class="notif-item{% if not n.is_read %} unread{% endif %}" data-read="{{ n.is_read|yesno:'1,0' }}">
+                                <span class="notif-body">
+                                    <span class="notif-text">{% if n.message %}{{ n.message }}{% else %}{{ n.get_verb_display }}{% endif %}</span>
+                                    <span class="notif-time">{{ n.created_at|timesince }} trước</span>
+                                </span>
+                                {% if not n.is_read %}<span class="notif-dot"></span>{% endif %}
+                            </a>
+                        {% empty %}
+                            <p class="notif-empty">Không có thông báo nào.</p>
+                        {% endfor %}
+                    </div>
+                    <a href="{% url 'notifications:list' %}" class="notif-viewall">Xem tất cả</a>
+                </div>
+            </div>
+            <div class="user-menu-wrapper">
+                <button type="button" class="user-menu-btn" onclick="toggleUserMenu(event)">
+                    <span class="user-name">{{ user }}</span>
+                    <span class="pill">{{ user.get_role_display }}</span>
+                </button>
+                <div class="user-dropdown" id="userDropdown" hidden>
+                    <a href="{% url 'accounts:my_profile' %}">Hồ sơ của tôi</a>
+                    <a href="{% url 'account_change_password' %}">Đổi mật khẩu</a>
+                    <a href="#" onclick="showLogoutConfirm(event)">Đăng xuất</a>
+                </div>
+            </div>
+        {% else %}
+            <a href="{% url 'account_login' %}">Đăng nhập</a>
+            <a href="{% url 'account_signup' %}">Đăng ký</a>
+        {% endif %}
+    </div>
+</header>
+<div class="nav-panel-overlay" id="navPanelOverlay" hidden onclick="document.getElementById('navPanelOverlay').hidden = true;">
+    <div class="nav-panel" onclick="event.stopPropagation();">
+        <button type="button" class="nav-panel-close" onclick="toggleNavPanel(event)" aria-label="Đóng">&times;</button>
+        <div class="nav-panel-logo">
+            <img src="{% static 'img/logo-ngang.png' %}" alt="EC Forum">
+        </div>
+        <nav class="nav-panel-list">
+            <a href="{% url 'search:results' %}">Tìm kiếm</a>
+            <a href="{% url 'announcements:list' %}">Thông báo của Khoa</a>
+            <a href="{% url 'forum:post_list' %}">Diễn đàn</a>
+            <a href="{% url 'groups:list' %}">Nhóm</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'notifications:list' %}">Thông báo cá nhân</a>
+                {% if user.role == 'staff' %}
+                    <button type="button" class="nav-panel-accordion-btn" onclick="toggleAccordion(this)">
+                        Quản trị <span class="chevron">▾</span>
+                    </button>
+                    <div class="nav-panel-submenu" hidden>
+                        <a href="{% url 'dashboard:overview' %}">Dashboard</a>
+                        <a href="{% url 'accounts:user_list' %}">Quản lý tài khoản</a>
+                        <a href="{% url 'groups:pending_list' %}">Duyệt nhóm</a>
+                        <a href="{% url 'moderation:pending_content_list' %}">Duyệt nội dung</a>
+                        <a href="{% url 'moderation:report_list' %}">Báo cáo vi phạm</a>
+                        <a href="{% url 'moderation:appeal_list' %}">Kháng nghị</a>
+                        <a href="{% url 'moderation:keyword_list' %}">Từ khóa nhạy cảm</a>
+                        <a href="{% url 'moderation:log_list' %}">Nhật ký kiểm duyệt</a>
+                        <a href="{% url 'forum:category_list' %}">Chuyên mục diễn đàn</a>
+                        <a href="{% url 'forum:tag_list' %}">Thẻ diễn đàn</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </nav>
+    </div>
+</div>
+{% if user.is_authenticated %}
+<div class="confirm-modal-overlay" id="logoutConfirmOverlay" hidden onclick="hideLogoutConfirm(event)">
+    <div class="confirm-modal-card" onclick="event.stopPropagation();">
+        <h2>Đăng xuất</h2>
+        <p>Bạn có chắc chắn muốn đăng xuất không?</p>
+        <div class="confirm-modal-actions">
+            <form method="post" action="{% url 'account_logout' %}" style="flex:1;">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="width:100%;">Có</button>
+            </form>
+            <a href="#" class="btn btn-secondary" onclick="hideLogoutConfirm(event)">Không</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+<div class="confirm-modal-overlay" id="deleteConfirmOverlay" hidden onclick="hideDeleteConfirm(event)">
+    <div class="confirm-modal-card" onclick="event.stopPropagation();">
+        <h2 id="deleteConfirmTitle">Xác nhận xóa?</h2>
+        <div class="confirm-modal-actions">
+            <form method="post" id="deleteConfirmForm" style="flex:1;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" style="width:100%;">Xóa</button>
+            </form>
+            <a href="#" class="btn btn-secondary" onclick="hideDeleteConfirm(event)">Hủy</a>
+        </div>
+    </div>
+</div>
+<main>
+    {% if messages %}
+    <div class="confirm-modal-overlay" id="messageModalOverlay" onclick="hideMessageModal(event)">
+        <div class="confirm-modal-card" onclick="event.stopPropagation();">
+            <h2>Thông báo</h2>
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn" style="width:100%;" onclick="hideMessageModal(event)">Đóng</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+    <div class="site-footer-inner">
+        <div class="site-footer-brand">
+            <strong>EC Forum</strong>
+            <p>Diễn đàn quản lý và trao đổi thông tin nội bộ Khoa Thương mại điện tử - Marketing và Công nghệ số, Trường Đại học Kinh tế - Đại học Đà Nẵng.</p>
+        </div>
+        <div class="site-footer-links">
+            <h4>Điều hướng nhanh</h4>
+            <a href="{% url 'announcements:list' %}">Thông tin / thông báo chính thức &amp; sự kiện</a>
+            <a href="{% url 'forum:post_list' %}">Diễn đàn thảo luận</a>
+            <a href="{% url 'groups:list' %}">Danh sách nhóm</a>
+        </div>
+    </div>
+    <div class="site-footer-bottom">© {% now "Y" %} EC Forum - Khoa Thương mại điện tử - Marketing và Công nghệ số.</div>
+</footer>
+<script>
+    function toggleNotifDropdown(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('notifDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function toggleNavPanel(event) {
+        event.stopPropagation();
+        var overlay = document.getElementById('navPanelOverlay');
+        if (overlay) {
+            overlay.hidden = !overlay.hidden;
+        }
+    }
+
+    function toggleAccordion(button) {
+        var submenu = button.nextElementSibling;
+        if (submenu) {
+            submenu.hidden = !submenu.hidden;
+            button.classList.toggle('open', !submenu.hidden);
+        }
+    }
+
+    function toggleUserMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('userDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function showLogoutConfirm(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var userDropdown = document.getElementById('userDropdown');
+        if (userDropdown) {
+            userDropdown.hidden = true;
+        }
+        var overlay = document.getElementById('logoutConfirmOverlay');
+        if (overlay) {
+            overlay.hidden = false;
+        }
+    }
+
+    function hideLogoutConfirm(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        var overlay = document.getElementById('logoutConfirmOverlay');
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    function hideMessageModal(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        var overlay = document.getElementById('messageModalOverlay');
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    function showDeleteConfirm(event, formAction, title) {
+        event.preventDefault();
+        document.getElementById('deleteConfirmTitle').textContent = title || 'Xác nhận xóa?';
+        document.getElementById('deleteConfirmForm').action = formAction;
+        document.getElementById('deleteConfirmOverlay').hidden = false;
+    }
+
+    function hideDeleteConfirm(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        var overlay = document.getElementById('deleteConfirmOverlay');
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    function toggleAdminMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('adminDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function togglePostMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById('postMenuDropdown');
+        if (dropdown) {
+            dropdown.hidden = !dropdown.hidden;
+        }
+    }
+
+    function filterNotifTab(button, filter) {
+        document.querySelectorAll('.notif-tab').forEach(function (b) { b.classList.remove('active'); });
+        button.classList.add('active');
+        document.querySelectorAll('.notif-item').forEach(function (item) {
+            item.hidden = (filter === 'unread' && item.dataset.read === '1');
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        var dropdown = document.getElementById('notifDropdown');
+        var wrapper = document.querySelector('.notif-bell-wrapper');
+        if (dropdown && !dropdown.hidden && wrapper && !wrapper.contains(event.target)) {
+            dropdown.hidden = true;
+        }
+        var userDropdown = document.getElementById('userDropdown');
+        var userWrapper = document.querySelector('.user-menu-wrapper');
+        if (userDropdown && !userDropdown.hidden && userWrapper && !userWrapper.contains(event.target)) {
+            userDropdown.hidden = true;
+        }
+        var adminDropdown = document.getElementById('adminDropdown');
+        var adminWrapper = document.querySelector('.admin-menu-wrapper');
+        if (adminDropdown && !adminDropdown.hidden && adminWrapper && !adminWrapper.contains(event.target)) {
+            adminDropdown.hidden = true;
+        }
+        var postMenuDropdown = document.getElementById('postMenuDropdown');
+        var postMenuWrapper = document.querySelector('.post-menu-wrapper');
+        if (postMenuDropdown && !postMenuDropdown.hidden && postMenuWrapper && !postMenuWrapper.contains(event.target)) {
+            postMenuDropdown.hidden = true;
+        }
+    });
+
+    (function initHeaderSearchSuggest() {
+        // Goi y tim kiem truc tiep: go >= 2 ky tu -> goi /search/suggest/ (debounce 250ms), o trong -> lich su tim kiem.
+        // Phim: Mui ten len/xuong chon, Enter mo, Esc dong. Ket qua dung textContent (khong chen HTML tu server).
+        var input = document.getElementById('headerSearchInput');
+        if (!input) { return; }
+        var dataEl = document.getElementById('headerRecentSearchesData');
+        var recentSearches = dataEl ? JSON.parse(dataEl.textContent) : [];
+        var form = input.closest('form');
+        var SUGGEST_URL = input.dataset.suggestUrl;
+        var ICONS = { forum: '💬', announcement: '📢', group_post: '👥', group: '🏷️', history: '🕘', all: '🔎' };
+        var box = document.createElement('div');
+        box.className = 'search-suggest-box';
+        box.id = 'headerSearchSuggest';
+        box.setAttribute('role', 'listbox');
+        box.hidden = true;
+        form.appendChild(box);
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-controls', box.id);
+        input.setAttribute('aria-expanded', 'false');
+        input.setAttribute('aria-autocomplete', 'list');
+
+        var timer = null, controller = null, activeIndex = -1, items = [];
+
+        function close() { box.hidden = true; input.setAttribute('aria-expanded', 'false'); activeIndex = -1; }
+        function open() { box.hidden = false; input.setAttribute('aria-expanded', 'true'); }
+
+        function highlight(el, text, term) {
+            // To dam phan khop (khong phan biet hoa/thuong), van dung text node -> an toan XSS
+            var i = term ? text.toLowerCase().indexOf(term.toLowerCase()) : -1;
+            if (i < 0) { el.textContent = text; return; }
+            el.appendChild(document.createTextNode(text.slice(0, i)));
+            var mark = document.createElement('mark');
+            mark.textContent = text.slice(i, i + term.length);
+            el.appendChild(mark);
+            el.appendChild(document.createTextNode(text.slice(i + term.length)));
+        }
+
+        function render(rows, term, heading) {
+            box.innerHTML = '';
+            items = [];
+            activeIndex = -1;
+            if (heading) {
+                var h = document.createElement('div');
+                h.className = 'search-suggest-heading';
+                h.textContent = heading;
+                box.appendChild(h);
+            }
+            rows.forEach(function (row, index) {
+                var item = document.createElement('a');
+                item.className = 'search-suggest-item' + (row.type === 'all' ? ' search-suggest-all' : '');
+                item.href = row.url;
+                item.id = 'headerSuggest-' + index;
+                item.setAttribute('role', 'option');
+                var icon = document.createElement('span');
+                icon.className = 'search-suggest-icon';
+                icon.setAttribute('aria-hidden', 'true');
+                icon.textContent = ICONS[row.type] || '•';
+                var body = document.createElement('span');
+                body.className = 'search-suggest-body';
+                var title = document.createElement('span');
+                title.className = 'search-suggest-title';
+                highlight(title, row.title, row.type === 'all' || row.type === 'history' ? '' : term);
+                body.appendChild(title);
+                if (row.type_label || row.meta) {
+                    var meta = document.createElement('span');
+                    meta.className = 'search-suggest-meta';
+                    meta.textContent = [row.type_label, row.meta].filter(Boolean).join(' · ');
+                    body.appendChild(meta);
+                }
+                item.appendChild(icon);
+                item.appendChild(body);
+                item.addEventListener('mousedown', function (event) { event.preventDefault(); });
+                box.appendChild(item);
+                items.push(item);
+            });
+            if (rows.length) { open(); } else { close(); }
+        }
+
+        function showHistory() {
+            var term = input.value.trim().toLowerCase();
+            var rows = recentSearches
+                .filter(function (q) { return !term || q.toLowerCase().indexOf(term) !== -1; })
+                .map(function (q) { return { type: 'history', title: q, url: form.action + '?q=' + encodeURIComponent(q) }; });
+            render(rows, '', rows.length ? 'Tìm kiếm gần đây' : '');
+        }
+
+        function fetchSuggestions(term) {
+            if (!SUGGEST_URL || !window.fetch) { return; }
+            if (controller) { controller.abort(); }
+            controller = window.AbortController ? new AbortController() : null;
+            fetch(SUGGEST_URL + '?q=' + encodeURIComponent(term), {
+                signal: controller ? controller.signal : undefined,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (resp) { return resp.ok ? resp.json() : { results: [] }; })
+                .then(function (data) {
+                    if (input.value.trim() !== term) { return; }  // nguoi dung da go tiep
+                    var rows = data.results.slice();
+                    rows.push({ type: 'all', title: 'Xem tất cả kết quả cho “' + term + '”', url: form.action + '?q=' + encodeURIComponent(term) });
+                    render(rows, term, data.results.length ? 'Gợi ý' : 'Không có tiêu đề nào khớp');
+                })
+                .catch(function () { /* bi huy do go tiep, hoac mat mang: van tim kiem thuong duoc */ });
+        }
+
+        function onInput() {
+            var term = input.value.trim();
+            clearTimeout(timer);
+            if (term.length < 2) { showHistory(); return; }
+            timer = setTimeout(function () { fetchSuggestions(term); }, 250);
+        }
+
+        function setActive(index) {
+            items.forEach(function (el) { el.classList.remove('active'); el.setAttribute('aria-selected', 'false'); });
+            activeIndex = index;
+            if (index >= 0 && items[index]) {
+                items[index].classList.add('active');
+                items[index].setAttribute('aria-selected', 'true');
+                input.setAttribute('aria-activedescendant', items[index].id);
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
+        }
+
+        input.addEventListener('focus', onInput);
+        input.addEventListener('input', onInput);
+        input.addEventListener('keydown', function (event) {
+            if (box.hidden || !items.length) { return; }
+            if (event.key === 'ArrowDown') { event.preventDefault(); setActive((activeIndex + 1) % items.length); }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(activeIndex <= 0 ? items.length - 1 : activeIndex - 1); }
+            else if (event.key === 'Enter' && activeIndex >= 0) { event.preventDefault(); window.location.href = items[activeIndex].href; }
+            else if (event.key === 'Escape') { close(); }
+        });
+        document.addEventListener('click', function (event) {
+            if (!form.contains(event.target)) { close(); }
+        });
+    })();
+
+    // Khối code trong bài viết: hiện tên ngôn ngữ + nút "Sao chép"
+    (function () {
+        var LABELS = { plaintext: 'Văn bản', javascript: 'JavaScript', csharp: 'C#', cpp: 'C/C++', bash: 'Terminal' };
+        document.querySelectorAll('.rich-content pre').forEach(function (pre) {
+            var code = pre.querySelector('code');
+            var match = code && (code.className || '').match(/language-([\w+#-]+)/);
+            if (match) {
+                var lang = document.createElement('span');
+                lang.className = 'code-lang';
+                lang.textContent = LABELS[match[1]] || match[1];
+                pre.appendChild(lang);
+            }
+            if (!navigator.clipboard) { return; }
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'code-copy';
+            btn.textContent = 'Sao chép';
+            btn.addEventListener('click', function () {
+                navigator.clipboard.writeText((code || pre).innerText).then(function () {
+                    btn.textContent = 'Đã chép ✓';
+                    setTimeout(function () { btn.textContent = 'Sao chép'; }, 1500);
+                });
+            });
+            pre.appendChild(btn);
+        });
+    })();
+
+    // Chuyen che do sang/toi: luu lua chon (localStorage), doi icon + nhan cho trinh doc man hinh
+    (function () {
+        var btn = document.getElementById('themeToggle');
+        if (!btn) { return; }
+        var root = document.documentElement;
+        function sync() {
+            var dark = root.getAttribute('data-theme') === 'dark';
+            btn.textContent = dark ? '☀️' : '🌙';
+            btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            btn.setAttribute('aria-label', dark ? 'Tắt chế độ tối' : 'Bật chế độ tối');
+        }
+        btn.addEventListener('click', function () {
+            var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.classList.add('theme-transition');
+            root.setAttribute('data-theme', next);
+            try { localStorage.setItem('ecforum-theme', next); } catch (e) { /* bo qua neu bi chan */ }
+            sync();
+            setTimeout(function () { root.classList.remove('theme-transition'); }, 300);
+        });
+        sync();
+    })();
+</script>
+</body>
+</html>

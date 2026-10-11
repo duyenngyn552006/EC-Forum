@@ -1,0 +1,28 @@
+{# Phan trang dung chung. Dung: {% include "_pagination.html" with noun="bài viết" %} - can page_obj trong context #}
+{% if page_obj and page_obj.has_other_pages %}
+<nav class="pagination" aria-label="Phân trang">
+    {% if page_obj.has_previous %}
+        <a class="page-link page-step" href="{% page_url page_obj.previous_page_number %}" rel="prev">‹ Trước</a>
+    {% else %}
+        <span class="page-link page-step disabled" aria-disabled="true">‹ Trước</span>
+    {% endif %}
+
+    {% page_window page_obj as pages %}
+    {% for n in pages %}
+        {% if n is None %}
+            <span class="page-gap" aria-hidden="true">…</span>
+        {% elif n == page_obj.number %}
+            <span class="page-link current" aria-current="page">{{ n }}</span>
+        {% else %}
+            <a class="page-link" href="{% page_url n %}" aria-label="Trang {{ n }}">{{ n }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+        <a class="page-link page-step" href="{% page_url page_obj.next_page_number %}" rel="next">Sau ›</a>
+    {% else %}
+        <span class="page-link page-step disabled" aria-disabled="true">Sau ›</span>
+    {% endif %}
+</nav>
+<p class="pagination-info">Hiển thị {{ page_obj.start_index }}–{{ page_obj.end_index }} trên tổng {{ page_obj.paginator.count }} {{ noun|default:"mục" }}</p>
+{% endif %}

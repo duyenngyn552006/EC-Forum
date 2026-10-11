@@ -1,0 +1,27 @@
+{% extends "account/base_entrance.html" %}
+{% load allauth %}
+{% block head_title %}Đăng ký{% endblock head_title %}
+{% block entrance %}
+    {% element h1 %}
+        Đăng ký tài khoản
+    {% endelement %}
+    {% element p %}
+        Đã có tài khoản? <a href="{{ login_url }}">Đăng nhập</a> ngay.
+    {% endelement %}
+    {% if not SOCIALACCOUNT_ONLY %}
+        {% url 'account_signup' as action_url %}
+        {% element form form=form method="post" action=action_url tags="entrance,signup" %}
+            {% slot body %}
+                {% csrf_token %}
+                {% element fields form=form unlabeled=True %}
+                {% endelement %}
+                {{ redirect_field }}
+            {% endslot %}
+            {% slot actions %}
+                {% element button tags="prominent,signup" type="submit" %}
+                    Đăng ký
+                {% endelement %}
+            {% endslot %}
+        {% endelement %}
+    {% endif %}
+{% endblock entrance %}

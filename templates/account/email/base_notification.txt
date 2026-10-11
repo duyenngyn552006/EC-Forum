@@ -1,0 +1,13 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+{% block content %}{% autoescape off %}Bạn nhận được email này vì tài khoản của bạn vừa có thay đổi sau:
+
+{% block notification_message %}
+{% endblock notification_message %}
+
+Nếu bạn không nhận ra thay đổi này, vui lòng thực hiện các biện pháp bảo mật cần thiết ngay lập tức.
+Thay đổi này đến từ:
+
+- Địa chỉ IP: {{ip}}
+- Trình duyệt: {{user_agent}}
+- Thời gian: {{timestamp}}{% endautoescape %}{% endblock %}

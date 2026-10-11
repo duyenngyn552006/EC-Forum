@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo vi phạm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Báo cáo vi phạm đang chờ xử lý</h1>
+    {% for r in reports %}
+    <div class="card">
+        <p>Người báo cáo: {{ r.reporter }} · {{ r.created_at|date:"d/m/Y H:i" }}</p>
+        <p>Nội dung bị báo cáo: {{ r.content_type.name }} #{{ r.object_id }}</p>
+        <p>Lý do: {{ r.reason }}</p>
+        <a class="btn" href="{% url 'moderation:report_resolve' r.pk %}">Xử lý</a>
+    </div>
+    {% empty %}
+    <p>Không có báo cáo nào.</p>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<style>
+    /* Mau bieu do theo vai tro (dataviz): 3 slot dau bang mau mac dinh, da kiem tra tren nen the trang (#fff) va nen the toi (#111a2b) */
+    .viz-root {
+        --viz-surface: #ffffff; --viz-text: #1a1a1a; --viz-text-2: #52514e; --viz-muted: #6b6a66;
+        --viz-grid: #e9e8e2; --viz-axis: #c3c2b7;
+        --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+        --delta-up: #006300; --delta-down: #c42f2f;
+    }
+    html[data-theme="dark"] .viz-root {
+        --viz-surface: #111a2b; --viz-text: #e5e9f0; --viz-text-2: #b7c3d6; --viz-muted: #8d99ad;
+        --viz-grid: #222e45; --viz-axis: #33415c;
+        --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+        --delta-up: #3ccf5a; --delta-down: #f87171;
+    }
+
+    /* Nut chon dang vien thuoc (Tuan/Thang/Nam, Bieu do/Bang) */
+    .seg-tabs { display: inline-flex; background: #e8edf4; border-radius: 999px; padding: 3px; }
+    .seg-tabs a, .seg-tabs button { padding: 7px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #475569 !important;
+        text-decoration: none; background: none; border: none; cursor: pointer; font-family: inherit; }
+    .seg-tabs [aria-current="page"], .seg-tabs [aria-selected="true"] { background: #10233f; color: #fff !important; box-shadow: 0 1px 4px rgba(16, 35, 63, 0.3); }
+    .seg-tabs a:focus-visible, .seg-tabs button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    html[data-theme="dark"] .seg-tabs { background: #17223a; }
+    html[data-theme="dark"] .seg-tabs a, html[data-theme="dark"] .seg-tabs button { color: #b7c3d6 !important; }
+    html[data-theme="dark"] .seg-tabs [aria-current="page"], html[data-theme="dark"] .seg-tabs [aria-selected="true"] { background: #2f5aa8; color: #fff !important; }
+
+    /* Bo loc ky: 1 hang, tren cung, ap dung cho moi so lieu ben duoi */
+    .period-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
+    .period-nav { display: inline-flex; align-items: center; gap: 6px; }
+    .period-nav .nav-step { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+        border: 1px solid #d1d5db; background: #fff; color: #10233f !important; text-decoration: none; font-size: 18px; line-height: 1; }
+    .period-nav a.nav-step:hover { background: #eef1f5; }
+    .period-nav .nav-step.disabled { color: #c3c9d3 !important; background: #f8fafc; cursor: default; }
+    .period-label { font-weight: 700; color: #10233f; font-size: 15px; padding: 0 4px; white-space: nowrap; }
+    .period-live { font-size: 12px; font-weight: 600; color: #475569; background: #eef1f5; border-radius: 999px; padding: 2px 9px; }
+    .period-picker { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+    .period-picker select, .period-picker input[type=date] { width: auto; min-width: 0; padding: 6px 10px; margin: 0; font-size: 13.5px; }
+    .period-picker .btn { padding: 6px 12px; }
+    /* Nut "Ve ky hien tai": vien thuoc co vien, cung kieu nut < > ben canh */
+    .period-today { display: inline-flex; align-items: center; gap: 6px; height: 34px; box-sizing: border-box; padding: 0 14px;
+        border: 1px solid #d1d5db; border-radius: 999px; background: #fff; color: #10233f !important; font-size: 13px; font-weight: 600;
+        text-decoration: none; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
+    .period-today:hover { background: #eef1f5; border-color: #94a3b8; text-decoration: none; }
+    .period-today:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    .period-today .icon { font-size: 15px; line-height: 1; }
+    html[data-theme="dark"] .period-today { background: #111a2b; border-color: #2c3a55; color: #dbe7ff !important; }
+    html[data-theme="dark"] .period-today:hover { background: #1d2a44; border-color: #3a4a68; }
+    html[data-theme="dark"] .period-nav .nav-step { background: #111a2b; border-color: #2c3a55; color: #dbe7ff !important; }
+    html[data-theme="dark"] .period-nav a.nav-step:hover { background: #1d2a44; }
+    html[data-theme="dark"] .period-nav .nav-step.disabled { background: #0f1829; color: #4b5a75 !important; }
+    html[data-theme="dark"] .period-label { color: #f1f5fb; }
+    html[data-theme="dark"] .period-live { background: #1d2a44; color: #b7c3d6; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .stat-tile { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px 18px; }
+    .stat-label { font-size: 13px; font-weight: 600; color: #64748b; margin: 0 0 6px; }
+    .stat-value { font-size: 32px; font-weight: 700; color: #10233f; line-height: 1.1; margin: 0; }
+    .stat-sub { font-size: 12.5px; color: #64748b; margin: 6px 0 0; }
+    .stat-delta { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; }
+    .stat-delta.up { color: var(--delta-up); }
+    .stat-delta.down { color: var(--delta-down); }
+    .stat-delta.flat, .stat-delta.new { color: var(--viz-text-2); }
+    .stat-tile.needs-action { border-color: #f1c27d; background: #fffaf0; }
+    .status-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: #fdecc8; color: #7a4a00; }
+    .role-table td:last-child, .role-table th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Bieu do / bang */
+    .chart-card { background: var(--viz-surface); }
+    .chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 20px; margin-bottom: 10px; }
+    .chart-head h3 { margin: 0; }
+    .chart-head p { margin: 2px 0 0; font-size: 13px; color: var(--viz-text-2); }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; margin: 0 0 6px; padding: 0; font-size: 13px; color: var(--viz-text); }
+    .chart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+    .line-key { display: inline-block; width: 16px; height: 0; border-top: 2px solid; border-radius: 2px; }
+    .chart-wrap { position: relative; }
+    .chart-wrap svg { display: block; width: 100%; height: 280px; overflow: visible; }
+    .chart-wrap svg:focus-visible { outline: 2px solid #2563eb; outline-offset: 4px; border-radius: 6px; }
+    .chart-wrap text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 11.5px; fill: var(--viz-muted); font-variant-numeric: tabular-nums; }
+    .chart-tooltip { position: absolute; pointer-events: none; background: var(--viz-surface); color: var(--viz-text); border: 1px solid var(--viz-axis);
+        border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); min-width: 150px; z-index: 5; }
+    .chart-tooltip[hidden] { display: none; }
+    .chart-tooltip .tt-title { color: var(--viz-text-2); margin-bottom: 4px; }
+    .chart-tooltip .tt-row { display: flex; align-items: center; gap: 8px; }
+    .chart-tooltip .tt-row strong { min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; color: var(--viz-text); }
+    .chart-tooltip .tt-row span:last-child { color: var(--viz-text-2); }
+    .chart-panel[hidden] { display: none; }
+    .chart-panel table td:not(:first-child), .chart-panel table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+    .chart-panel table td.future { color: var(--viz-muted); }
+    .chart-empty { font-size: 13px; color: var(--viz-text-2); margin: 6px 0 0; }
+</style>
+
+<div class="viz-root">
+<div class="card">
+    <h1 style="margin:0;">Dashboard tổng quan</h1>
+    <p class="stat-sub">Số liệu toàn hệ thống, chỉ Giáo vụ Khoa xem được.</p>
+</div>
+
+<div class="period-bar">
+    <nav class="seg-tabs" aria-label="Loại kỳ thống kê">
+        {% for key, text in period_labels.items %}
+            <a href="?period={{ key }}"{% if key == period %} aria-current="page"{% endif %}>{{ text }}</a>
+        {% endfor %}
+    </nav>
+
+    <div class="period-nav">
+        <a class="nav-step" href="?{{ prev_query }}" aria-label="Kỳ trước" title="Kỳ trước">‹</a>
+        <span class="period-label">{{ info.label }}</span>
+        {% if next_query %}
+            <a class="nav-step" href="?{{ next_query }}" aria-label="Kỳ sau" title="Kỳ sau">›</a>
+        {% else %}
+            <span class="nav-step disabled" aria-disabled="true" title="Chưa tới kỳ sau">›</span>
+        {% endif %}
+        {% if info.is_current %}<span class="period-live">Đang diễn ra</span>{% endif %}
+    </div>
+
+    <form method="get" class="period-picker" id="periodPicker">
+        <input type="hidden" name="period" value="{{ period }}">
+        {% if period == "week" %}
+            <label class="sr-only" for="pickDate">Chọn 1 ngày bất kỳ trong tuần</label>
+            <input type="date" id="pickDate" name="date" value="{{ info.start|date:'Y-m-d' }}" title="Chọn 1 ngày bất kỳ trong tuần muốn xem">
+        {% elif period == "month" %}
+            <label class="sr-only" for="pickMonth">Tháng</label>
+            <select id="pickMonth" name="month">
+                {% for m in month_options %}<option value="{{ m }}"{% if m == info.start.month %} selected{% endif %}>Tháng {{ m }}</option>{% endfor %}
+            </select>
+        {% endif %}
+        {% if period != "week" %}
+            <label class="sr-only" for="pickYear">Năm</label>
+            <select id="pickYear" name="year">
+                {% for y in year_options %}<option value="{{ y }}"{% if y == info.start.year %} selected{% endif %}>{{ y }}</option>{% endfor %}
+            </select>
+        {% endif %}
+        <noscript><button class="btn btn-sm" type="submit">Xem</button></noscript>
+    </form>
+    {% if not info.is_current %}<a class="period-today" href="?period={{ period }}"><span class="icon" aria-hidden="true">↺</span>Về kỳ hiện tại</a>{% endif %}
+</div>
+
+<div class="stat-grid">
+    {% for m in metrics %}
+    <div class="stat-tile">
+        <p class="stat-label">{{ m.label }}</p>
+        <p class="stat-value">{{ m.value }}</p>
+        <p class="stat-sub">
+            {% if m.delta is None %}
+                {% if m.value %}<span class="stat-delta new">Mới phát sinh</span> · {{ info.prev_label }}: 0{% else %}<span class="stat-delta flat">Chưa có hoạt động</span>{% endif %}
+            {% else %}
+                {% if m.delta > 0 %}<span class="stat-delta up"><span aria-hidden="true">▲</span> +{{ m.delta }}%</span>
+                {% elif m.delta < 0 %}<span class="stat-delta down"><span aria-hidden="true">▼</span> {{ m.delta }}%</span>
+                {% else %}<span class="stat-delta flat">Không đổi</span>{% endif %}
+                so với {{ info.prev_label }} ({{ m.previous }})
+            {% endif %}
+        </p>
+        <p class="stat-sub">Tổng hiện có: {{ m.total }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card chart-card">
+    <div class="chart-head">
+        <div>
+            <h3>Hoạt động theo thời gian</h3>
+            <p>{{ info.label }} · {% if info.unit == "month" %}theo từng tháng trong năm{% elif period == "week" %}theo từng ngày trong tuần{% else %}theo từng ngày trong tháng{% endif %}{% if info.is_current %} · tính đến hôm nay{% endif %}</p>
+        </div>
+        <div class="seg-tabs" role="tablist" aria-label="Kiểu hiển thị">
+            <button type="button" role="tab" id="tabChart" aria-controls="panelChart" aria-selected="true">Biểu đồ</button>
+            <button type="button" role="tab" id="tabTable" aria-controls="panelTable" aria-selected="false" tabindex="-1">Bảng</button>
+        </div>
+    </div>
+
+    <div class="chart-panel" id="panelChart" role="tabpanel" aria-labelledby="tabChart">
+        <ul class="chart-legend" aria-label="Chú thích">
+            {% for s in chart.series %}
+                <li><span class="line-key" style="border-color: var(--series-{{ forloop.counter }});"></span>{{ s.label }}</li>
+            {% endfor %}
+        </ul>
+        <div class="chart-wrap" id="activityChart"></div>
+    </div>
+    <div class="chart-panel" id="panelTable" role="tabpanel" aria-labelledby="tabTable">
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>{% if info.unit == "month" %}Tháng{% else %}Ngày{% endif %}</th>{% for s in chart.series %}<th>{{ s.label }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                    {% for row in chart_rows %}
+                        <tr>{% for cell in row %}{% if forloop.first %}<td>{{ cell }}</td>{% elif cell is None %}<td class="future" title="Chưa tới">—</td>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{ chart|json_script:"activityChartData" }}
+</div>
+
+<h3>Cần xử lý</h3>
+<div class="stat-grid">
+    <div class="stat-tile{% if pending_groups %} needs-action{% endif %}">
+        <p class="stat-label">Nhóm chờ duyệt{% if pending_groups %}<span class="status-tag">Cần xử lý</span>{% endif %}</p>
+        <p class="stat-value">{{ pending_groups }}</p>
+        <p class="stat-sub"><a class="more-link more-link-sm" href="{% url 'groups:pending_list' %}">Mở danh sách duyệt nhóm <span class="arrow" aria-hidden="true">→</span></a></p>
+    </div>
+    <div class="stat-tile{% if pending_reports %} needs-action{% endif %}">
+        <p class="stat-label">Báo cáo vi phạm chờ xử lý{% if pending_reports %}<span class="status-tag">Cần xử lý</span>{% endif %}</p>
+        <p class="stat-value">{{ pending_reports }}</p>
+        <p class="stat-sub"><a class="more-link more-link-sm" href="{% url 'moderation:report_list' %}">Mở danh sách báo cáo <span class="arrow" aria-hidden="true">→</span></a></p>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-top:0;">Người dùng theo vai trò</h3>
+    <div class="table-responsive">
+        <table class="role-table">
+            <thead><tr><th>Vai trò</th><th>Số tài khoản</th></tr></thead>
+            <tbody>
+                {% for row in users_by_role %}
+                    <tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<script>
+(function () {
+    // O chon tuan / thang / nam: doi gia tri la chuyen ky ngay (khong can bam nut)
+    var picker = document.getElementById('periodPicker');
+    if (picker) {
+        picker.querySelectorAll('select, input[type=date]').forEach(function (field) {
+            field.addEventListener('change', function () { if (field.value) { picker.submit(); } });
+        });
+    }
+})();
+
+(function () {
+    // Bieu do duong SVG thuan: duong 2px, luoi mo 1px, duong doc (crosshair) bam moc gan nhat, tooltip liet ke moi chuoi.
+    // Moc chua toi (null) khong ve - duong dung lai o hom nay. Ban phim: Tab vao bieu do, mui ten trai/phai di chuyen moc.
+    var mount = document.getElementById('activityChart');
+    var dataEl = document.getElementById('activityChartData');
+    if (!mount || !dataEl) { return; }
+    var data = JSON.parse(dataEl.textContent);
+    var NS = 'http://www.w3.org/2000/svg';
+    var H = 280, M = { top: 14, right: 18, bottom: 30, left: 38 };
+    var index = -1;
+    var isNum = function (v) { return typeof v === 'number'; };
+
+    function el(name, attrs, parent) {
+        var node = document.createElementNS(NS, name);
+        Object.keys(attrs || {}).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+        if (parent) { parent.appendChild(node); }
+        return node;
+    }
+    function niceMax(v) {
+        if (v <= 4) { return 4; }
+        var p = Math.pow(10, Math.floor(Math.log10(v)));
+        var steps = [1, 2, 2.5, 5, 10];
+        for (var i = 0; i < steps.length; i++) { if (steps[i] * p >= v) { return steps[i] * p; } }
+        return 10 * p;
+    }
+    var allValues = [];
+    data.series.forEach(function (s) { s.values.forEach(function (v) { if (isNum(v)) { allValues.push(v); } }); });
+    var total = allValues.reduce(function (a, b) { return a + b; }, 0);
+
+    function draw() {
+        mount.querySelectorAll('svg, .chart-tooltip, .chart-empty').forEach(function (node) { node.remove(); });
+        if (!mount.clientWidth) { return; }  // tab bieu do dang an -> ve khi mo tab
+        if (total === 0) {
+            var empty = document.createElement('p');
+            empty.className = 'chart-empty';
+            empty.textContent = 'Chưa có hoạt động nào trong kỳ này.';
+            mount.appendChild(empty);
+        }
+        var W = Math.max(mount.clientWidth, 320);
+        var n = data.labels.length;
+        var lastIndex = -1;
+        data.series[0].values.forEach(function (v, i) { if (isNum(v)) { lastIndex = i; } });
+        var max = niceMax(Math.max.apply(null, allValues.concat([0])));
+        var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+        var x = function (i) { return M.left + (n === 1 ? plotW / 2 : (i * plotW) / (n - 1)); };
+        var y = function (v) { return M.top + plotH - (v / max) * plotH; };
+
+        var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', tabindex: '0',
+            'aria-label': 'Biểu đồ hoạt động: ' + data.series.map(function (s) {
+                return s.label + ' tổng ' + s.values.reduce(function (a, b) { return a + (isNum(b) ? b : 0); }, 0);
+            }).join(', ') + '. Dùng phím mũi tên trái phải để xem từng mốc.' });
+
+        for (var t = 0; t <= 4; t++) {
+            var v = (max / 4) * t, yy = y(v);
+            var line = el('line', { x1: M.left, x2: W - M.right, y1: yy, y2: yy }, svg);
+            line.style.stroke = t === 0 ? 'var(--viz-axis)' : 'var(--viz-grid)';
+            line.style.strokeWidth = '1';
+            var label = el('text', { x: M.left - 8, y: yy + 4, 'text-anchor': 'end' }, svg);
+            label.textContent = Number.isInteger(v) ? v : v.toFixed(1);
+        }
+        // Nhan truc hoanh: tuan/nam hien du (7/12 moc); thang toi da ~10 nhan, luon co moc cuoi
+        var every = n <= 12 ? 1 : Math.ceil(n / 10);
+        data.labels.forEach(function (text, i) {
+            if (i % every !== 0 && i !== n - 1) { return; }
+            if (i !== n - 1 && n - 1 - i < every) { return; }
+            var lx = el('text', { x: x(i), y: H - 8, 'text-anchor': 'middle' }, svg);
+            lx.textContent = text;
+        });
+
+        data.series.forEach(function (s, si) {
+            var d = '', pen = 'M';
+            s.values.forEach(function (val, i) {
+                if (!isNum(val)) { pen = 'M'; return; }
+                d += pen + x(i) + ' ' + y(val) + ' ';
+                pen = 'L';
+            });
+            if (!d) { return; }
+            var path = el('path', { d: d, fill: 'none' }, svg);
+            path.style.stroke = 'var(--series-' + (si + 1) + ')';
+            path.style.strokeWidth = '2';
+            path.style.strokeLinejoin = 'round';
+            path.style.strokeLinecap = 'round';
+            if (lastIndex >= 0) {
+                var end = el('circle', { cx: x(lastIndex), cy: y(s.values[lastIndex]), r: 4 }, svg);
+                end.style.fill = 'var(--series-' + (si + 1) + ')';
+                end.style.stroke = 'var(--viz-surface)';
+                end.style.strokeWidth = '2';
+            }
+        });
+
+        var cross = el('line', { y1: M.top, y2: M.top + plotH, visibility: 'hidden' }, svg);
+        cross.style.stroke = 'var(--viz-axis)';
+        cross.style.strokeWidth = '1';
+        var dots = data.series.map(function (s, si) {
+            var c = el('circle', { r: 4, visibility: 'hidden' }, svg);
+            c.style.fill = 'var(--series-' + (si + 1) + ')';
+            c.style.stroke = 'var(--viz-surface)';
+            c.style.strokeWidth = '2';
+            return c;
+        });
+        el('rect', { x: M.left - 10, y: M.top, width: plotW + 20, height: plotH, fill: 'transparent', class: 'hit' }, svg);
+        mount.appendChild(svg);
+        var hit = svg.querySelector('.hit');
+
+        var tip = document.createElement('div');
+        tip.className = 'chart-tooltip';
+        tip.hidden = true;
+        mount.appendChild(tip);
+
+        function show(i) {
+            index = Math.max(0, Math.min(n - 1, i));
+            var px = x(index);
+            cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+            dots.forEach(function (c, si) {
+                var val = data.series[si].values[index];
+                c.setAttribute('cx', px); c.setAttribute('cy', y(isNum(val) ? val : 0));
+                c.setAttribute('visibility', isNum(val) ? 'visible' : 'hidden');
+            });
+            tip.innerHTML = '';
+            var title = document.createElement('div');
+            title.className = 'tt-title';
+            title.textContent = data.labels[index] + (isNum(data.series[0].values[index]) ? '' : ' · chưa tới');
+            tip.appendChild(title);
+            data.series.forEach(function (s, si) {
+                var row = document.createElement('div');
+                row.className = 'tt-row';
+                var key = document.createElement('span');
+                key.className = 'line-key';
+                key.style.borderColor = 'var(--series-' + (si + 1) + ')';
+                var val = document.createElement('strong');
+                val.textContent = isNum(s.values[index]) ? s.values[index] : '—';
+                var name = document.createElement('span');
+                name.textContent = s.label;
+                row.appendChild(key); row.appendChild(val); row.appendChild(name);
+                tip.appendChild(row);
+            });
+            tip.hidden = false;
+            var scale = mount.clientWidth / W;
+            var left = px * scale + 14;
+            if (left + tip.offsetWidth > mount.clientWidth) { left = px * scale - tip.offsetWidth - 14; }
+            tip.style.left = Math.max(0, left) + 'px';
+            tip.style.top = (M.top * scale) + 'px';
+        }
+        function hide() {
+            cross.setAttribute('visibility', 'hidden');
+            dots.forEach(function (c) { c.setAttribute('visibility', 'hidden'); });
+            tip.hidden = true;
+        }
+        function nearest(evt) {
+            var rect = svg.getBoundingClientRect();
+            var px = (evt.clientX - rect.left) * (W / rect.width);
+            return n === 1 ? 0 : Math.round(((px - M.left) / plotW) * (n - 1));
+        }
+        var start = lastIndex >= 0 ? lastIndex : n - 1;
+        hit.addEventListener('pointermove', function (evt) { show(nearest(evt)); });
+        hit.addEventListener('pointerleave', hide);
+        svg.addEventListener('focus', function () { show(index < 0 ? start : index); });
+        svg.addEventListener('blur', hide);
+        svg.addEventListener('keydown', function (evt) {
+            if ((evt.key === 'ArrowLeft' || evt.key === 'ArrowRight') && index < 0) { evt.preventDefault(); show(start); return; }
+            if (evt.key === 'ArrowRight') { evt.preventDefault(); show(index + 1); }
+            else if (evt.key === 'ArrowLeft') { evt.preventDefault(); show(index - 1); }
+            else if (evt.key === 'Escape') { hide(); }
+        });
+    }
+
+    // Tab Bieu do / Bang (nho lua chon trong localStorage). Khong co JS -> hien ca hai.
+    var tabs = [document.getElementById('tabChart'), document.getElementById('tabTable')];
+    var panels = [document.getElementById('panelChart'), document.getElementById('panelTable')];
+    function select(which, focus) {
+        tabs.forEach(function (tab, i) {
+            var on = i === which;
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            tab.tabIndex = on ? 0 : -1;
+            panels[i].hidden = !on;
+        });
+        if (focus) { tabs[which].focus(); }
+        try { localStorage.setItem('ecforum-dash-view', which === 1 ? 'table' : 'chart'); } catch (e) { /* bo qua */ }
+        if (which === 0) { draw(); }
+    }
+    tabs.forEach(function (tab, i) {
+        tab.addEventListener('click', function () { select(i, false); });
+        tab.addEventListener('keydown', function (evt) {
+            if (evt.key === 'ArrowRight' || evt.key === 'ArrowLeft') { evt.preventDefault(); select(1 - i, true); }
+        });
+    });
+    var saved = null;
+    try { saved = localStorage.getItem('ecforum-dash-view'); } catch (e) { /* bo qua */ }
+    select(saved === 'table' ? 1 : 0, false);
+
+    var resizeTimer;
+    window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
+})();
+</script>
+{% endblock %}

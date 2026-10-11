@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{% block head_title %}{% endblock %} - EC Forum{% endblock %}
+{% block extra_head %}
+<style>
+    .auth-modal-overlay {
+        position: fixed; inset: 0; background: rgba(16, 35, 63, 0.55);
+        display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px;
+    }
+    .auth-modal-card {
+        position: relative; background: #fff; border-radius: 12px; padding: 32px;
+        width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        max-height: 90vh; overflow-y: auto;
+    }
+    .auth-modal-close {
+        position: absolute; top: 10px; right: 14px; font-size: 24px; line-height: 1;
+        color: #9ca3af; text-decoration: none;
+    }
+    .auth-modal-close:hover { color: #10233f; }
+    .auth-modal-card h1 { color: #10233f; font-size: 22px; margin: 0 0 16px; }
+    .auth-modal-card p { font-size: 14px; color: #374151; margin: 0 0 14px; }
+    .auth-modal-card a { color: #10233f; font-weight: 600; }
+    .auth-modal-card form p { margin: 0 0 14px; }
+    .auth-modal-card form label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #1a1a1a; }
+    .auth-modal-card input[type=text],
+    .auth-modal-card input[type=email],
+    .auth-modal-card input[type=password],
+    .auth-modal-card input[type=date],
+    .auth-modal-card input[type=time] {
+        width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+        font-size: 14px; box-sizing: border-box;
+    }
+    .auth-modal-card input:focus { outline: none; border-color: #10233f; box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.15); }
+    .auth-modal-card input[type=checkbox] { width: auto; margin-right: 6px; }
+    .auth-modal-card button[type=submit] {
+        width: 100%; background: #10233f; color: #fff; border: none; padding: 12px;
+        border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px;
+    }
+    .auth-modal-card button[type=submit]:hover { background: #16305c; }
+    .auth-modal-card ul.errorlist { color: #b91c1c; font-size: 12px; list-style: none; padding: 0; margin: 0 0 8px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-modal-overlay">
+    <div class="auth-modal-card">
+        <a href="{% url 'home' %}" class="auth-modal-close" aria-label="Đóng">&times;</a>
+        {% block entrance %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

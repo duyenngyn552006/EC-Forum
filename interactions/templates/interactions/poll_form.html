@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Tạo bình chọn{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Tạo bình chọn</h1>
+    <p>Cho bài viết: <a href="{{ object.get_absolute_url }}">{{ object }}</a></p>
+    <p style="font-size:13px;color:#6b7280;">Người tham gia chọn được 1 lựa chọn và đổi lại được cho đến hạn chốt.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Tạo bình chọn</button>
+        <a class="btn btn-secondary" href="{{ object.get_absolute_url }}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

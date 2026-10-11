@@ -1,0 +1,52 @@
+{% if poll %}
+<div class="card poll-card">
+    <h3 style="margin-top:0;">📊 {{ poll.question }}</h3>
+    <p class="poll-meta">
+        {{ poll_total_votes }} lượt bình chọn ·
+        {% if poll.is_closed %}Đã kết thúc{% elif poll.closes_at %}Kết thúc lúc {{ poll.closes_at|date:"d/m/Y H:i" }}{% else %}Không giới hạn thời gian{% endif %}
+    </p>
+
+    {% if poll_can_vote %}
+    <form method="post" action="{% url 'interactions:poll_vote' poll.pk %}">
+        {% csrf_token %}
+    {% endif %}
+        {% for option in poll_options %}
+            <label class="poll-option{% if option.is_mine %} mine{% endif %}">
+                <span class="poll-option-text">
+                    {% if poll_can_vote %}<input type="radio" name="option_id" value="{{ option.pk }}" {% if option.is_mine %}checked{% endif %} required>{% endif %}
+                    {{ option.text }}{% if option.is_mine %} <em>(lựa chọn của bạn)</em>{% endif %}
+                </span>
+                <span class="poll-option-count">{{ option.percent }}% · {{ option.vote_count }}</span>
+                <span class="poll-bar"><span class="poll-bar-fill" style="width: {{ option.percent }}%;"></span></span>
+            </label>
+        {% endfor %}
+    {% if poll_can_vote %}
+        <button class="btn" type="submit">{% if poll_my_option_id %}Đổi lựa chọn{% else %}Bình chọn{% endif %}</button>
+    </form>
+    {% elif not user.is_authenticated %}
+        <p><a href="{% url 'account_login' %}">Đăng nhập</a> để bình chọn.</p>
+    {% elif not poll.is_closed %}
+        <p class="poll-meta">Chỉ thành viên nhóm mới được bình chọn.</p>
+    {% endif %}
+
+    {% if poll_can_delete %}
+        <form method="post" action="{% url 'interactions:poll_delete' poll.pk %}" style="margin-top:10px;" onsubmit="return confirm('Xóa bình chọn này? Toàn bộ phiếu sẽ mất.');">
+            {% csrf_token %}
+            <button type="submit" class="reply-toggle-btn danger-text">Xóa bình chọn</button>
+        </form>
+    {% endif %}
+</div>
+{% elif can_create_poll %}
+<div class="card">
+    <a class="btn btn-secondary" href="{% url 'interactions:poll_create' model_key object.pk %}">📊 Thêm bình chọn</a>
+</div>
+{% endif %}
+
+<style>
+    .poll-meta { font-size: 13px; color: #6b7280; margin: 0 0 12px; }
+    .poll-option { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: default; font-weight: 400; font-size: 14px; }
+    .poll-option.mine { border-color: #2563eb; background: #f4f8ff; }
+    .poll-option-count { font-size: 13px; color: #374151; white-space: nowrap; }
+    .poll-bar { grid-column: 1 / -1; height: 6px; background: #eef1f5; border-radius: 999px; overflow: hidden; }
+    .poll-bar-fill { display: block; height: 100%; background: #10233f; border-radius: 999px; }
+</style>

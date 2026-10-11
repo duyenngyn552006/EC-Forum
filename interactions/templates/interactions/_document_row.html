@@ -1,0 +1,25 @@
+{# 1 dong tai lieu trong formset (dung chung cho o that va mau empty_form): ten + (link Drive HOAC tep) #}
+<div class="doc-row">
+    {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+    <div>
+        <label class="sr-only" for="{{ f.title.id_for_label }}">{{ f.title.label }}</label>
+        {{ f.title }}
+    </div>
+    <div class="doc-source">
+        <label class="sr-only" for="{{ f.url.id_for_label }}">{{ f.url.label }}</label>
+        {{ f.url }}
+        <div class="doc-file">
+            <span class="doc-or">hoặc</span>
+            <label class="sr-only" for="{{ f.file.id_for_label }}">{{ f.file.label }}</label>
+            {{ f.file }}
+        </div>
+        {% if f.instance.pk and f.instance.file %}
+            <p class="doc-current">Tệp hiện tại: <strong>{{ f.instance.file.name|cut:"documents/"|truncatechars:60 }}</strong> ({{ f.instance.file_size|filesizeformat }}) — chọn tệp khác để thay</p>
+        {% endif %}
+    </div>
+    <div>
+        {% if f.instance.pk %}<label class="doc-delete">{{ f.DELETE }} Xóa</label>{% endif %}
+    </div>
+    {% for field in f.visible_fields %}{% for e in field.errors %}<p class="field-errors">{{ field.label }}: {{ e }}</p>{% endfor %}{% endfor %}
+    {% for e in f.non_field_errors %}<p class="field-errors">{{ e }}</p>{% endfor %}
+</div>

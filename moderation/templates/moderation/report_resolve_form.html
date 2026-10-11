@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Xử lý báo cáo{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Xử lý báo cáo #{{ report.pk }}</h1>
+    <p>Lý do báo cáo: {{ report.reason }}</p>
+    <p>Nội dung: {{ report.content_object }}</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Xác nhận xử lý</button>
+    </form>
+</div>
+{% endblock %}

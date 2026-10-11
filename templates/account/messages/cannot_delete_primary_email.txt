@@ -1,0 +1,1 @@
+Bạn không thể xóa địa chỉ email chính ({{ email }}).

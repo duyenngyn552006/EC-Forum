@@ -1,0 +1,22 @@
+{# 1 o anh dinh kem trong formset (dung chung cho o that va mau empty_form) #}
+<div class="attach-card">
+    {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+    <div class="attach-preview">
+        {% if f.instance.pk and f.instance.image %}
+            <img src="{{ f.instance.image.url }}" alt="{{ f.instance.caption }}">
+        {% else %}
+            <span class="attach-placeholder">🖼️<br>Chưa chọn ảnh</span>
+        {% endif %}
+    </div>
+    <label class="attach-file">
+        <span class="sr-only">{{ f.image.label }}</span>
+        {{ f.image }}
+    </label>
+    <label class="sr-only" for="{{ f.caption.id_for_label }}">{{ f.caption.label }}</label>
+    {{ f.caption }}
+    {% if f.instance.pk %}
+        <label class="attach-delete">{{ f.DELETE }} Xóa ảnh này</label>
+    {% endif %}
+    {% for e in f.non_field_errors %}<p class="field-errors">{{ e }}</p>{% endfor %}
+    {% for field in f.visible_fields %}{% for e in field.errors %}<p class="field-errors">{{ e }}</p>{% endfor %}{% endfor %}
+</div>

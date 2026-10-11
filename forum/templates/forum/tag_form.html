@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Sửa thẻ{% else %}Thêm thẻ{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>{% if object %}Sửa thẻ "{{ object.name }}"{% else %}Thêm thẻ{% endif %}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Lưu</button>
+        <a class="btn btn-secondary" href="{% url 'forum:tag_list' %}">Hủy</a>
+    </form>
+</div>
+{% endblock %}

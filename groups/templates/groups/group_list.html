@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Nhóm{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Danh sách nhóm</h1>
+    {% if user.is_authenticated %}<a class="btn" href="{% url 'groups:create' %}">+ Tạo nhóm mới</a>{% endif %}
+    <div class="filter-pills" style="margin-top:12px;">
+        <a href="{% url 'groups:list' %}" {% if not recruiting_only %}class="active"{% endif %}>Tất cả nhóm</a>
+        <a href="{% url 'groups:list' %}?recruiting=1" {% if recruiting_only %}class="active"{% endif %}>🔎 Đang tuyển thành viên</a>
+    </div>
+</div>
+{% for g in groups %}
+<div class="list-card">
+    <div class="list-avatar">
+        {% if g.logo %}<img src="{{ g.logo.url }}" alt="{{ g.name }}">{% else %}{{ g.name|first|upper }}{% endif %}
+    </div>
+    <div class="list-body">
+        <div class="list-meta">
+            <span>Tạo bởi {{ g.created_by }}</span>
+            <span>· {{ g.created_at|date:"d/m/Y" }}</span>
+            <span class="badge">{{ g.memberships.count }} thành viên</span>
+            {% if g.is_recruiting_open %}<span class="badge" style="background:#e3f7e9;color:#14532d;">🔎 Đang tuyển</span>{% endif %}
+        </div>
+        <h3 class="list-title"><a href="{% url 'groups:detail' g.slug %}">{{ g.name }}</a></h3>
+        <p class="list-excerpt">{{ g.description|truncatewords:30 }}</p>
+        {% if g.is_recruiting_open %}<p class="list-excerpt"><strong>Cần tuyển:</strong> {{ g.recruit_positions|truncatewords:20 }}</p>{% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p>{% if recruiting_only %}Hiện chưa có nhóm nào đang tuyển thành viên.{% else %}Chưa có nhóm nào.{% endif %}</p>
+</div>
+{% endfor %}
+{% include "_pagination.html" with noun="nhóm" %}
+{% endblock %}
